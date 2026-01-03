@@ -17,6 +17,7 @@ import * as employeeService from "../services/employeeService";
 import UserProfileMenu from "../components/UserProfileMenu";
 import LeaveManagement from "../components/LeaveManagement";
 import AdminAttendance from "../components/AdminAttendance";
+import AdminPayroll from "../components/AdminPayroll";
 import styles from "./AdminDashboard.module.css";
 
 type TabType = "employees" | "attendance" | "timeOff" | "payroll";
@@ -300,14 +301,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const renderPayrollTab = () => {
-    return (
-      <div className={styles.tabContent}>
-        <h2>Payroll Management</h2>
-        <p className={styles.comingSoon}>
-          Payroll processing and salary management will be displayed here.
-        </p>
-      </div>
-    );
+    return <AdminPayroll />;
   };
 
   const getStats = () => {

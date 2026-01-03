@@ -4,28 +4,23 @@ import { useAuth } from "../context/AuthContext";
 import attendanceService from "../services/attendanceService.ts";
 import styles from "./CheckInOut.module.css";
 
-interface TodayAttendance {
-  id?: string;
-  checkInTime: Date | null;
+interface AttendanceSession {
+  id: string;
+  checkInTime: Date;
   checkOutTime: Date | null;
-  workHours: string;
+  duration: number; // in seconds
 }
 
 const CheckInOut: React.FC = () => {
   const { user } = useAuth();
-  const [todayAttendance, setTodayAttendance] = useState<TodayAttendance>({
-    id: undefined,
-    checkInTime: null,
-    checkOutTime: null,
-    workHours: "0h 0m",
-  });
+  const [sessions, setSessions] = useState<AttendanceSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [currentElapsedTime, setCurrentElapsedTime] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isCheckedIn =
-    todayAttendance.checkInTime !== null &&
-    todayAttendance.checkOutTime === null;
+  const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const isCheckedIn = activeSession !== undefined && activeSession !== null;
 
   useEffect(() => {
     if (user) {
@@ -41,10 +36,10 @@ const CheckInOut: React.FC = () => {
 
   // Start/update timer when checked in
   useEffect(() => {
-    if (isCheckedIn && todayAttendance.checkInTime) {
+    if (isCheckedIn && activeSession) {
       // Calculate initial elapsed time
       const elapsed = Math.floor(
-        (Date.now() - todayAttendance.checkInTime.getTime()) / 1000,
+        (Date.now() - activeSession.checkInTime.getTime()) / 1000,
       );
       setCurrentElapsedTime(elapsed);
 
@@ -66,30 +61,46 @@ const CheckInOut: React.FC = () => {
         timerRef.current = null;
       }
     };
-  }, [isCheckedIn, todayAttendance.checkInTime]);
+  }, [isCheckedIn, activeSession]);
 
   const loadTodayAttendance = async () => {
     if (!user) return;
 
     try {
-      const attendance = await attendanceService.getTodayAttendance();
+      const today = new Date().toISOString().split("T")[0];
+      const records = await attendanceService.getMyAttendance(today, today);
 
-      if (attendance) {
-        setTodayAttendance({
-          id: attendance.id,
-          checkInTime: attendance.checkIn ? new Date(attendance.checkIn) : null,
-          checkOutTime: attendance.checkOut
-            ? new Date(attendance.checkOut)
-            : null,
-          workHours: attendance.workHours || "0h 0m",
-        });
-      } else {
-        setTodayAttendance({
-          id: undefined,
-          checkInTime: null,
-          checkOutTime: null,
-          workHours: "0h 0m",
-        });
+      // Convert backend records to sessions
+      const todaySessions: AttendanceSession[] = records.map((record) => {
+        const checkIn = record.checkIn ? new Date(record.checkIn) : new Date();
+        const checkOut = record.checkOut ? new Date(record.checkOut) : null;
+
+        let duration = 0;
+        if (checkOut) {
+          duration = Math.floor(
+            (checkOut.getTime() - checkIn.getTime()) / 1000,
+          );
+        }
+
+        return {
+          id: record.id,
+          checkInTime: checkIn,
+          checkOutTime: checkOut,
+          duration: duration,
+        };
+      });
+
+      // Sort by check-in time (newest first)
+      todaySessions.sort(
+        (a, b) => b.checkInTime.getTime() - a.checkInTime.getTime(),
+      );
+
+      setSessions(todaySessions);
+
+      // Find active session (no check-out)
+      const active = todaySessions.find((s) => s.checkOutTime === null);
+      if (active) {
+        setActiveSessionId(active.id);
       }
     } catch (error) {
       console.error("Error loading attendance:", error);
@@ -97,18 +108,21 @@ const CheckInOut: React.FC = () => {
   };
 
   const handleCheckIn = async () => {
-    if (!user || isLoading || isCheckedIn) return;
+    if (!user || isLoading) return;
 
     setIsLoading(true);
     try {
       const result = await attendanceService.checkIn();
 
-      setTodayAttendance({
-        id: result.id,
+      const newSession: AttendanceSession = {
+        id: result.id || Date.now().toString(),
         checkInTime: result.checkIn ? new Date(result.checkIn) : new Date(),
         checkOutTime: null,
-        workHours: "0h 0m",
-      });
+        duration: 0,
+      };
+
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSessionId(newSession.id);
     } catch (error: any) {
       console.error("Error checking in:", error);
       alert(error.message || "Failed to check in. Please try again.");
@@ -118,14 +132,27 @@ const CheckInOut: React.FC = () => {
   };
 
   const handleCheckOut = async () => {
-    if (!user || isLoading || !isCheckedIn) return;
+    if (!user || isLoading || !activeSession) return;
 
     setIsLoading(true);
     try {
       await attendanceService.checkOut();
 
-      // Reload attendance to get updated data with calculated work hours
-      await loadTodayAttendance();
+      // Update session with checkout time
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === activeSessionId
+            ? {
+                ...session,
+                checkOutTime: new Date(),
+                duration: currentElapsedTime,
+              }
+            : session,
+        ),
+      );
+
+      setActiveSessionId(null);
+      setCurrentElapsedTime(0);
     } catch (error: any) {
       console.error("Error checking out:", error);
       alert(error.message || "Failed to check out. Please try again.");
@@ -150,9 +177,17 @@ const CheckInOut: React.FC = () => {
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const formatWorkHours = (workHours: string) => {
-    // Convert "8h 30m" to readable format
-    return workHours;
+  const getTotalWorkTime = () => {
+    const total = sessions.reduce((acc, session) => {
+      if (session.checkOutTime) {
+        return acc + session.duration;
+      } else if (session.id === activeSessionId) {
+        return acc + currentElapsedTime;
+      }
+      return acc;
+    }, 0);
+
+    return total;
   };
 
   if (!user) return null;
@@ -174,7 +209,7 @@ const CheckInOut: React.FC = () => {
       </div>
 
       {/* Running Clock Display */}
-      {isCheckedIn && todayAttendance.checkInTime && (
+      {isCheckedIn && activeSession && (
         <div className={styles.clockDisplay}>
           <div className={styles.clockIcon}>
             <Timer size={24} />
@@ -192,13 +227,13 @@ const CheckInOut: React.FC = () => {
           <button
             className={`${styles.button} ${styles.buttonCheckIn}`}
             onClick={handleCheckIn}
-            disabled={isLoading || todayAttendance.checkOutTime !== null}
+            disabled={isLoading}
           >
             <LogIn size={18} />
             {isLoading
               ? "Checking In..."
-              : todayAttendance.checkOutTime
-                ? "Already Completed Today"
+              : sessions.length > 0
+                ? "Start New Session"
                 : "Check In"}
           </button>
         ) : (
@@ -213,75 +248,76 @@ const CheckInOut: React.FC = () => {
         )}
       </div>
 
-      {/* Total Work Time Today */}
-      {todayAttendance.checkInTime && (
-        <div className={styles.totalTime}>
-          <Clock size={16} />
-          <span className={styles.totalTimeLabel}>
-            {todayAttendance.checkOutTime
-              ? "Total Work Time:"
-              : "Current Session:"}
-          </span>
-          <span className={styles.totalTimeValue}>
-            {todayAttendance.checkOutTime
-              ? formatWorkHours(todayAttendance.workHours)
-              : formatDuration(currentElapsedTime)}
-          </span>
+      {/* Info message about multiple sessions */}
+      {sessions.length > 0 && !isCheckedIn && (
+        <div className={styles.infoMessage}>
+          <span className={styles.infoIcon}>ℹ️</span>
+          <span>You can check in multiple times during the day</span>
         </div>
       )}
 
-      {/* Today's Attendance Details */}
-      {todayAttendance.checkInTime && (
+      {/* Total Work Time Today */}
+      <div className={styles.totalTime}>
+        <Clock size={16} />
+        <span className={styles.totalTimeLabel}>Total Today:</span>
+        <span className={styles.totalTimeValue}>
+          {formatDuration(getTotalWorkTime())}
+        </span>
+      </div>
+
+      {/* Session History */}
+      {sessions.length > 0 && (
         <div className={styles.sessionsContainer}>
-          <h3 className={styles.sessionsTitle}>Today's Attendance</h3>
+          <h3 className={styles.sessionsTitle}>Today's Sessions</h3>
           <div className={styles.sessionsList}>
-            <div
-              className={`${styles.sessionCard} ${!todayAttendance.checkOutTime ? styles.sessionCardActive : ""}`}
-            >
-              <div className={styles.sessionHeader}>
-                <span className={styles.sessionNumber}>
-                  {new Date().toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-                {!todayAttendance.checkOutTime && (
-                  <span className={styles.sessionBadge}>Active</span>
-                )}
-              </div>
-              <div className={styles.sessionDetails}>
-                <div className={styles.sessionTime}>
-                  <LogIn size={14} className={styles.sessionIcon} />
-                  <span className={styles.sessionLabel}>Check In:</span>
-                  <span className={styles.sessionValue}>
-                    {formatTime(todayAttendance.checkInTime)}
+            {sessions.map((session, index) => (
+              <div
+                key={session.id}
+                className={`${styles.sessionCard} ${
+                  session.id === activeSessionId ? styles.sessionCardActive : ""
+                }`}
+              >
+                <div className={styles.sessionHeader}>
+                  <span className={styles.sessionNumber}>
+                    Session {sessions.length - index}
                   </span>
+                  {session.id === activeSessionId && (
+                    <span className={styles.sessionBadge}>Active</span>
+                  )}
                 </div>
-                {todayAttendance.checkOutTime ? (
-                  <>
+                <div className={styles.sessionDetails}>
+                  <div className={styles.sessionTime}>
+                    <LogIn size={14} className={styles.sessionIcon} />
+                    <span className={styles.sessionLabel}>In:</span>
+                    <span className={styles.sessionValue}>
+                      {formatTime(session.checkInTime)}
+                    </span>
+                  </div>
+                  {session.checkOutTime ? (
                     <div className={styles.sessionTime}>
                       <LogOut size={14} className={styles.sessionIcon} />
-                      <span className={styles.sessionLabel}>Check Out:</span>
+                      <span className={styles.sessionLabel}>Out:</span>
                       <span className={styles.sessionValue}>
-                        {formatTime(todayAttendance.checkOutTime)}
+                        {formatTime(session.checkOutTime)}
                       </span>
                     </div>
-                    <div className={styles.sessionDuration}>
-                      <span className={styles.sessionLabel}>Work Hours:</span>
-                      <span className={styles.sessionDurationValue}>
-                        {formatWorkHours(todayAttendance.workHours)}
-                      </span>
+                  ) : (
+                    <div className={styles.sessionTime}>
+                      <Timer size={14} className={styles.sessionIcon} />
+                      <span className={styles.sessionLabel}>Running...</span>
                     </div>
-                  </>
-                ) : (
-                  <div className={styles.sessionTime}>
-                    <Timer size={14} className={styles.sessionIcon} />
-                    <span className={styles.sessionLabel}>In Progress...</span>
+                  )}
+                  <div className={styles.sessionDuration}>
+                    <span className={styles.sessionLabel}>Duration:</span>
+                    <span className={styles.sessionDurationValue}>
+                      {session.id === activeSessionId
+                        ? formatDuration(currentElapsedTime)
+                        : formatDuration(session.duration)}
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
