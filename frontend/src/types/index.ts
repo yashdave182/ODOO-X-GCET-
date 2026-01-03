@@ -240,7 +240,7 @@ export interface AuthResponse {
 }
 
 export interface SignInCredentials {
-  email: string;
+  loginId: string;
   password: string;
 }
 
