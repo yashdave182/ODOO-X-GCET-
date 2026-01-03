@@ -17,7 +17,7 @@ export const signIn = async (
 ): Promise<AuthResponse> => {
   try {
     const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, {
-      login_id: credentials.email, // Can be login_id or email
+      login_id: credentials.loginId, // Employee ID / Login ID
       password: credentials.password,
     });
 
@@ -53,17 +53,18 @@ export const getCurrentUser = async (): Promise<User> => {
     // Map backend response to frontend User type
     return {
       id: data.id.toString(),
-      employeeId: data.login_id,
-      loginId: data.login_id,
+      employeeId: data.employee_id,
+      loginId: data.employee_id,
       email: data.email || "",
       role: data.role,
       firstName: data.name.split(" ")[0] || data.name,
       lastName: data.name.split(" ").slice(1).join(" ") || "",
       fullName: data.name,
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`,
-      companyCode: data.login_id.substring(0, 2), // Extract from login_id (OI)
+      companyCode: data.employee_id?.substring(0, 2) || "OI",
       yearOfJoining:
-        parseInt(data.login_id.substring(6, 10)) || new Date().getFullYear(),
+        parseInt(data.employee_id?.substring(6, 10) || "") ||
+        new Date().getFullYear(),
     };
   } catch (error: any) {
     if (error.response?.data?.detail) {

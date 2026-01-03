@@ -60,9 +60,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     initAuth();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (loginId: string, password: string) => {
     const response: AuthResponse = await authService.signIn({
-      email,
+      loginId,
       password,
     });
     setUser(response.user);

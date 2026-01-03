@@ -12,7 +12,7 @@ export const SignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: "",
+    loginId: "",
     password: "",
   });
 
@@ -27,7 +27,7 @@ export const SignIn = () => {
     setError("");
 
     try {
-      await signIn(formData.email, formData.password);
+      await signIn(formData.loginId, formData.password);
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to sign in");
@@ -60,10 +60,10 @@ export const SignIn = () => {
           <div>
             <Input
               type="text"
-              name="email"
+              name="loginId"
               label="Login ID / Email"
-              placeholder="OIODO20220001 or name@company.com"
-              value={formData.email}
+              placeholder="ADMIN001 or OIJODO20220001"
+              value={formData.loginId}
               onChange={handleChange}
               icon={<Mail size={18} />}
               fullWidth
