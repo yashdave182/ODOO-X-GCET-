@@ -44,7 +44,6 @@ def seed_admin():
         db.commit()
 
         print("Admin user created successfully.")
-        print("Seeded admin ID:", admin.employee_id)
 
     finally:
         db.close()
