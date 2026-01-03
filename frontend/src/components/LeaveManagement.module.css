@@ -1,0 +1,620 @@
+.container {
+    width: 100%;
+}
+
+/* Admin View */
+.adminView {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.tableContainer {
+    background: #1f2228;
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+.leaveTable {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+}
+
+.leaveTable thead {
+    background: #25282f;
+    border-bottom: 1px solid #2d3139;
+}
+
+.leaveTable th {
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.leaveTable tbody tr {
+    border-bottom: 1px solid #2d3139;
+    transition: background-color 0.2s;
+}
+
+.leaveTable tbody tr:hover {
+    background-color: #25282f;
+}
+
+.leaveTable tbody tr:last-child {
+    border-bottom: none;
+}
+
+.leaveTable tbody td {
+    padding: 16px 20px;
+    color: #d1d5db;
+    font-size: 14px;
+}
+
+.clickableRow {
+    cursor: pointer;
+}
+
+.employeeName {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.statusActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.approveBtn,
+.rejectBtn {
+    padding: 6px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.approveBtn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.approveBtn:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    transform: scale(1.05);
+}
+
+.rejectBtn {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.rejectBtn:hover {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    transform: scale(1.05);
+}
+
+.statusBadge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statusApproved {
+    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+    color: #d1fae5;
+}
+
+.statusRejected {
+    background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+    color: #fee2e2;
+}
+
+.statusPending {
+    background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+    color: #fef3c7;
+}
+
+.adminNote {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    border: 1px solid #3b82f6;
+    border-radius: 12px;
+    padding: 20px 24px;
+    color: #dbeafe;
+}
+
+.noteHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.adminNote p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* Employee View */
+.employeeView {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.leaveBalanceSection {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+}
+
+.balanceCard {
+    background: #1f2228;
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.balanceCard h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.balanceItems {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.balanceItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #25282f;
+    border-radius: 8px;
+}
+
+.balanceLabel {
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.balanceValue {
+    font-size: 16px;
+    font-weight: 600;
+    color: #3b82f6;
+    font-family: "Courier New", monospace;
+}
+
+.requestButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.requestButton:hover {
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Calendar */
+.calendarCard {
+    background: #1f2228;
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.calendarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.calendarHeader h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.calendarNav {
+    padding: 8px;
+    background: transparent;
+    border: 1px solid #2d3139;
+    border-radius: 6px;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.calendarNav:hover {
+    background: #25282f;
+    color: #ffffff;
+}
+
+.calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.calendarWeekday {
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.calendarDay {
+    padding: 12px;
+    text-align: center;
+    font-size: 14px;
+    color: #d1d5db;
+    background: #25282f;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.calendarDay:hover {
+    background: #2d3139;
+    color: #ffffff;
+}
+
+.calendarDayEmpty {
+    padding: 12px;
+}
+
+.calendarDayLeave {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    font-weight: 600;
+}
+
+.requestsList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.requestsList h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal {
+    background: #1f2228;
+    border-radius: 16px;
+    border: 1px solid #2d3139;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #2d3139;
+}
+
+.modalHeader h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.closeButton {
+    padding: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    color: #9ca3af;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.closeButton:hover {
+    background: #2d3139;
+    color: #ffffff;
+}
+
+.modalBody {
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formGroup label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #d1d5db;
+}
+
+.formInput {
+    padding: 12px 16px;
+    border: 1px solid #2d3139;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #ffffff;
+    background: #25282f;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.formInput:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formInput:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.dateInputs {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dateInputs span {
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.fileUpload {
+    border: 2px dashed #2d3139;
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.fileUpload:hover {
+    border-color: #3b82f6;
+    background: #25282f;
+}
+
+.fileInput {
+    display: none;
+}
+
+.fileLabel {
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #2d3139;
+}
+
+.cancelButton {
+    padding: 12px 24px;
+    background: transparent;
+    color: #d1d5db;
+    border: 1px solid #2d3139;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.cancelButton:hover {
+    background: #25282f;
+}
+
+.submitButton {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.submitButton:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Details Grid */
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.detailItem {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detailItem label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detailItem p {
+    font-size: 15px;
+    color: #ffffff;
+    margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .leaveBalanceSection {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .tableContainer {
+        overflow-x: auto;
+    }
+
+    .leaveTable {
+        min-width: 800px;
+    }
+
+    .leaveBalanceSection {
+        grid-template-columns: 1fr;
+    }
+
+    .detailsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal {
+        width: 95%;
+    }
+
+    .modalHeader,
+    .modalBody {
+        padding: 20px;
+    }
+
+    .dateInputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 480px) {
+    .balanceCard {
+        padding: 20px;
+    }
+
+    .requestButton {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+
+    .calendarDay,
+    .calendarWeekday {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .leaveTable th,
+    .leaveTable td {
+        padding: 12px;
+        font-size: 13px;
+    }
+}

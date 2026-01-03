@@ -1,2 +1,11 @@
-backend/dayflow.db
-backend/*.db
+# Environment
+.env
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Database
+*.db
+**/*.db

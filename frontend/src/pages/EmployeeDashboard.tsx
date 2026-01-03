@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Search, Settings } from "lucide-react";
+import { Settings, Search } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { Employee, AttendanceStatus } from "../types";
-import * as employeeService from "../services/employeeService";
+import { Attendance, Employee, AttendanceStatus } from "../types";
 import attendanceService from "../services/attendanceService";
-import EmployeeCard from "../components/EmployeeCard";
+import * as employeeService from "../services/employeeService";
 import UserProfileMenu from "../components/UserProfileMenu";
 import CheckInOut from "../components/CheckInOut";
+import EmployeeCard from "../components/EmployeeCard";
+import LeaveManagement from "../components/LeaveManagement";
 import styles from "./EmployeeDashboard.module.css";
 
 type TabType = "employees" | "attendance" | "timeOff";
 
 const EmployeeDashboard: React.FC = () => {
-  const {} = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("employees");
+  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,8 +25,11 @@ const EmployeeDashboard: React.FC = () => {
   );
 
   useEffect(() => {
-    loadEmployees();
-  }, []);
+    if (user) {
+      loadEmployees();
+      loadAttendanceRecords();
+    }
+  }, [user]);
 
   useEffect(() => {
     filterEmployees();
@@ -39,9 +44,7 @@ const EmployeeDashboard: React.FC = () => {
       const employeesWithStatus = await Promise.all(
         allEmployees.map(async (emp: Employee) => {
           try {
-            const attendance = await attendanceService.getTodayAttendance(
-              emp.id,
-            );
+            const attendance = await attendanceService.getTodayAttendance();
             return {
               ...emp,
               status: attendance?.status || AttendanceStatus.ABSENT,
@@ -91,6 +94,47 @@ const EmployeeDashboard: React.FC = () => {
     setSelectedEmployee(null);
   };
 
+  const loadAttendanceRecords = async () => {
+    setIsLoading(true);
+    try {
+      // Get last 30 days of attendance
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+
+      const records = await attendanceService.getMyAttendance(
+        startDate.toISOString().split("T")[0],
+        endDate.toISOString().split("T")[0],
+      );
+
+      setAttendanceRecords(records);
+    } catch (error) {
+      console.error("Error loading attendance records:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return "N/A";
+    const date = new Date(timeString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const renderEmployeesTab = () => {
     if (isLoading) {
       return (
@@ -122,25 +166,62 @@ const EmployeeDashboard: React.FC = () => {
   };
 
   const renderAttendanceTab = () => {
+    if (isLoading) {
+      return (
+        <div className={styles.loadingContainer}>
+          <p>Loading attendance records...</p>
+        </div>
+      );
+    }
+
+    if (attendanceRecords.length === 0) {
+      return (
+        <div className={styles.emptyContainer}>
+          <p className={styles.emptyText}>
+            Attendance history will be displayed here.
+          </p>
+        </div>
+      );
+    }
+
     return (
-      <div className={styles.tabContent}>
-        <h2>Attendance Records</h2>
-        <p className={styles.comingSoon}>
-          Attendance history will be displayed here.
-        </p>
+      <div className={styles.recordsContainer}>
+        <table className={styles.attendanceTable}>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th>Work Hours</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attendanceRecords.map((record) => (
+              <tr key={record.id}>
+                <td className={styles.dateCell}>{formatDate(record.date)}</td>
+                <td>{formatTime(record.checkIn)}</td>
+                <td>{formatTime(record.checkOut)}</td>
+                <td className={styles.hoursCell}>
+                  {record.workHours || "N/A"}
+                </td>
+                <td>
+                  <span
+                    className={`${styles.statusBadge} ${styles[`status${record.status}`]}`}
+                  >
+                    {record.status.replace("_", " ")}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   };
 
   const renderTimeOffTab = () => {
-    return (
-      <div className={styles.tabContent}>
-        <h2>Time Off & Leave Management</h2>
-        <p className={styles.comingSoon}>
-          Leave requests and time-off records will be displayed here.
-        </p>
-      </div>
-    );
+    return <LeaveManagement />;
   };
 
   return (
@@ -189,26 +270,43 @@ const EmployeeDashboard: React.FC = () => {
 
         {/* Content Area */}
         <div className={styles.content}>
-          {/* Search Bar */}
           {activeTab === "employees" && (
-            <div className={styles.searchContainer}>
-              <div className={styles.searchInputWrapper}>
-                <Search size={20} className={styles.searchIcon} />
-                <input
-                  type="text"
-                  placeholder="Search employees by name, email, job title, or department..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={styles.searchInput}
-                />
+            <>
+              <div className={styles.searchContainer}>
+                <div className={styles.searchInputWrapper}>
+                  <Search size={20} className={styles.searchIcon} />
+                  <input
+                    type="text"
+                    placeholder="Search employees by name, email, job title, or department..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
               </div>
-            </div>
+              {renderEmployeesTab()}
+            </>
           )}
 
-          {/* Tab Content */}
-          {activeTab === "employees" && renderEmployeesTab()}
-          {activeTab === "attendance" && renderAttendanceTab()}
-          {activeTab === "timeOff" && renderTimeOffTab()}
+          {activeTab === "attendance" && (
+            <>
+              <div className={styles.contentHeader}>
+                <h2 className={styles.contentTitle}>Attendance Records</h2>
+              </div>
+              {renderAttendanceTab()}
+            </>
+          )}
+
+          {activeTab === "timeOff" && (
+            <>
+              <div className={styles.contentHeader}>
+                <h2 className={styles.contentTitle}>
+                  Time Off & Leave Management
+                </h2>
+              </div>
+              {renderTimeOffTab()}
+            </>
+          )}
         </div>
       </main>
 
@@ -275,7 +373,7 @@ const EmployeeDashboard: React.FC = () => {
                 </div>
                 <div className={styles.modalInfoItem}>
                   <label>Status</label>
-                  <p className={styles.statusBadge}>
+                  <p className={styles.employeeStatusBadge}>
                     {selectedEmployee.employmentStatus}
                   </p>
                 </div>
