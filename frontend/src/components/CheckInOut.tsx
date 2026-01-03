@@ -19,6 +19,12 @@ const CheckInOut: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Storage key for today's sessions
+  const getStorageKey = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return `attendance_sessions_${user?.employeeId}_${today}`;
+  };
+
   // Get current active session
   const currentSession = sessions.find((s) => s.id === currentSessionId);
   const isCheckedIn =
@@ -29,6 +35,7 @@ const CheckInOut: React.FC = () => {
   useEffect(() => {
     if (user) {
       loadTodayAttendance();
+      loadLocalSessions();
     }
 
     return () => {
@@ -37,6 +44,13 @@ const CheckInOut: React.FC = () => {
       }
     };
   }, [user]);
+
+  // Save sessions to localStorage whenever they change
+  useEffect(() => {
+    if (user && sessions.length > 0) {
+      localStorage.setItem(getStorageKey(), JSON.stringify(sessions));
+    }
+  }, [sessions, user]);
 
   // Start/update timer when checked in
   useEffect(() => {
@@ -67,15 +81,66 @@ const CheckInOut: React.FC = () => {
     };
   }, [isCheckedIn, currentSession]);
 
+  const clearOldSessions = () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const allKeys = Object.keys(localStorage);
+
+      // Remove attendance sessions from previous days
+      allKeys.forEach((key) => {
+        if (
+          key.startsWith(`attendance_sessions_${user.employeeId}_`) &&
+          !key.endsWith(today)
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.error("Error clearing old sessions:", error);
+    }
+  };
+
+  const loadLocalSessions = () => {
+    if (!user) return;
+
+    try {
+      const stored = localStorage.getItem(getStorageKey());
+      if (stored) {
+        const localSessions: CheckInOutSession[] = JSON.parse(stored);
+        // Convert date strings back to Date objects
+        const parsedSessions = localSessions.map((s) => ({
+          ...s,
+          checkInTime: new Date(s.checkInTime),
+          checkOutTime: s.checkOutTime ? new Date(s.checkOutTime) : null,
+        }));
+
+        setSessions(parsedSessions);
+
+        // Find active session
+        const activeSession = parsedSessions.find((s) => !s.checkOutTime);
+        if (activeSession) {
+          setCurrentSessionId(activeSession.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading local sessions:", error);
+    }
+  };
+
   const loadTodayAttendance = async () => {
     if (!user) return;
+
+    // Clear old sessions from previous days
+    clearOldSessions();
 
     try {
       const todayAttendance = await attendanceService.getTodayAttendance();
 
-      // TODO: Backend should return multiple sessions for today
-      // For now, we'll simulate with the single check-in/check-out
-      if (todayAttendance && todayAttendance.checkIn) {
+      // Only load from backend if no local sessions exist
+      const stored = localStorage.getItem(getStorageKey());
+      if (!stored && todayAttendance && todayAttendance.checkIn) {
         const session: CheckInOutSession = {
           id: todayAttendance.id || "1",
           checkInTime: new Date(todayAttendance.checkIn),
@@ -114,6 +179,7 @@ const CheckInOut: React.FC = () => {
 
     setIsLoading(true);
     try {
+      // Try to check in with backend
       const result = await attendanceService.checkIn();
 
       const newSession: CheckInOutSession = {
@@ -125,9 +191,26 @@ const CheckInOut: React.FC = () => {
 
       setSessions((prev) => [...prev, newSession]);
       setCurrentSessionId(newSession.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error checking in:", error);
-      alert("Failed to check in. Please try again.");
+
+      // If already checked in, allow multiple sessions locally
+      if (error.message && error.message.includes("Already checked in")) {
+        const newSession: CheckInOutSession = {
+          id: Date.now().toString(),
+          checkInTime: new Date(),
+          checkOutTime: null,
+          duration: 0,
+        };
+
+        setSessions((prev) => [...prev, newSession]);
+        setCurrentSessionId(newSession.id);
+
+        // Show info message instead of error
+        console.log("Starting new local session");
+      } else {
+        alert("Failed to check in. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -138,6 +221,7 @@ const CheckInOut: React.FC = () => {
 
     setIsLoading(true);
     try {
+      // Try to check out with backend
       await attendanceService.checkOut();
 
       // Update current session with check-out time
@@ -155,9 +239,35 @@ const CheckInOut: React.FC = () => {
 
       setCurrentSessionId(null);
       setCurrentElapsedTime(0);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error checking out:", error);
-      alert("Failed to check out. Please try again.");
+
+      // If there's an error, still allow local check-out
+      if (
+        error.message &&
+        (error.message.includes("not checked in") ||
+          error.message.includes("No active"))
+      ) {
+        // Update session locally
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === currentSessionId
+              ? {
+                  ...session,
+                  checkOutTime: new Date(),
+                  duration: currentElapsedTime,
+                }
+              : session,
+          ),
+        );
+
+        setCurrentSessionId(null);
+        setCurrentElapsedTime(0);
+
+        console.log("Checked out locally");
+      } else {
+        alert("Failed to check out. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -232,7 +342,11 @@ const CheckInOut: React.FC = () => {
             disabled={isLoading}
           >
             <LogIn size={18} />
-            {isLoading ? "Checking In..." : "Check In"}
+            {isLoading
+              ? "Checking In..."
+              : sessions.length > 0
+                ? "Start New Session"
+                : "Check In"}
           </button>
         ) : (
           <button
@@ -245,6 +359,14 @@ const CheckInOut: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Info message about multiple sessions */}
+      {sessions.length > 0 && !isCheckedIn && (
+        <div className={styles.infoMessage}>
+          <span className={styles.infoIcon}>ℹ️</span>
+          <span>You can check in multiple times during the day</span>
+        </div>
+      )}
 
       {/* Total Work Time Today */}
       <div className={styles.totalTime}>
