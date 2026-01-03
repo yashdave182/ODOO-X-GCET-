@@ -17,6 +17,7 @@ const CheckInOut: React.FC = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [currentElapsedTime, setCurrentElapsedTime] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLocalMode, setIsLocalMode] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Storage key for today's sessions
@@ -191,26 +192,24 @@ const CheckInOut: React.FC = () => {
 
       setSessions((prev) => [...prev, newSession]);
       setCurrentSessionId(newSession.id);
+      setIsLocalMode(false);
     } catch (error: any) {
       console.error("Error checking in:", error);
 
-      // If already checked in, allow multiple sessions locally
-      if (error.message && error.message.includes("Already checked in")) {
-        const newSession: CheckInOutSession = {
-          id: Date.now().toString(),
-          checkInTime: new Date(),
-          checkOutTime: null,
-          duration: 0,
-        };
+      // Backend error - create local session anyway
+      // If already checked in or any other error, continue with local tracking
+      const newSession: CheckInOutSession = {
+        id: Date.now().toString(),
+        checkInTime: new Date(),
+        checkOutTime: null,
+        duration: 0,
+      };
 
-        setSessions((prev) => [...prev, newSession]);
-        setCurrentSessionId(newSession.id);
+      setSessions((prev) => [...prev, newSession]);
+      setCurrentSessionId(newSession.id);
+      setIsLocalMode(true);
 
-        // Show info message instead of error
-        console.log("Starting new local session");
-      } else {
-        alert("Failed to check in. Please try again.");
-      }
+      console.log("Started new local session (backend sync failed)");
     } finally {
       setIsLoading(false);
     }
@@ -242,32 +241,24 @@ const CheckInOut: React.FC = () => {
     } catch (error: any) {
       console.error("Error checking out:", error);
 
-      // If there's an error, still allow local check-out
-      if (
-        error.message &&
-        (error.message.includes("not checked in") ||
-          error.message.includes("No active"))
-      ) {
-        // Update session locally
-        setSessions((prev) =>
-          prev.map((session) =>
-            session.id === currentSessionId
-              ? {
-                  ...session,
-                  checkOutTime: new Date(),
-                  duration: currentElapsedTime,
-                }
-              : session,
-          ),
-        );
+      // Backend error - complete check-out locally anyway
+      // Since we're managing sessions on frontend, any backend error should not block check-out
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === currentSessionId
+            ? {
+                ...session,
+                checkOutTime: new Date(),
+                duration: currentElapsedTime,
+              }
+            : session,
+        ),
+      );
 
-        setCurrentSessionId(null);
-        setCurrentElapsedTime(0);
+      setCurrentSessionId(null);
+      setCurrentElapsedTime(0);
 
-        console.log("Checked out locally");
-      } else {
-        alert("Failed to check out. Please try again.");
-      }
+      console.log("Checked out locally (backend sync failed)");
     } finally {
       setIsLoading(false);
     }
@@ -318,6 +309,14 @@ const CheckInOut: React.FC = () => {
             {isCheckedIn ? "Active Session" : "Not Checked In"}
           </span>
         </div>
+        {isLocalMode && isCheckedIn && (
+          <span
+            className={styles.localModeBadge}
+            title="Session tracked locally"
+          >
+            Local
+          </span>
+        )}
       </div>
 
       {/* Running Clock Display */}
