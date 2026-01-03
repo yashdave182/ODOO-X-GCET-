@@ -5,26 +5,26 @@ from app.database import get_db
 from app.models.user import User
 from app.core.security import verify_password, create_access_token
 from app.core.dependencies import get_current_user
+from app.schemas.auth import LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/login")
 def login(
-    employee_id: str,
-    password: str,
+    payload: LoginRequest,
     db: Session = Depends(get_db),
 ):
     user = (
         db.query(User)
-        .filter(User.employee_id == employee_id)
+        .filter(User.employee_id == payload.login_id)
         .first()
     )
 
-    if not user or not verify_password(password, user.password_hash):
+    if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid employee ID or password",
+            detail="Invalid login ID or password",
         )
 
     access_token = create_access_token(
