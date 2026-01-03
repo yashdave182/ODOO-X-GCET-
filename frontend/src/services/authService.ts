@@ -1,182 +1,140 @@
-import {
-  AuthResponse,
-  SignInCredentials,
-  SignUpData,
-  User,
-  UserRole,
-  Company,
-} from "../types";
-import { extractCompanyCode, generateLoginId } from "../utils/loginIdGenerator";
+/**
+ * Authentication Service
+ * Handles all authentication-related API calls
+ * Following Dayflow HRMS API Contract Specification
+ */
 
-const API_DELAY = 800;
+import apiClient, { setAuthToken, removeAuthToken } from "../lib/apiClient";
+import { API_ENDPOINTS } from "../config/api.config";
+import { AuthResponse, SignInCredentials, User } from "../types";
 
-const mockCompanies: Company[] = [
-  {
-    id: "1",
-    name: "Odoo India",
-    code: "OI",
-    adminEmail: "admin@odooindia.com",
-    adminName: "Admin User",
-    phone: "+91 1234567890",
-    createdAt: "2022-01-01",
-  },
-];
-
-const mockUsers = [
-  {
-    id: "1",
-    employeeId: "EMP-001",
-    loginId: "OIADUS20220001",
-    email: "admin@odooindia.com",
-    password: "admin123",
-    role: UserRole.ADMIN,
-    firstName: "Admin",
-    lastName: "User",
-    fullName: "Admin User",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
-    companyCode: "OI",
-    yearOfJoining: 2022,
-  },
-  {
-    id: "2",
-    employeeId: "EMP-002",
-    loginId: "OIJODO20220002",
-    email: "john.doe@company.com",
-    password: "password123",
-    role: UserRole.EMPLOYEE,
-    firstName: "John",
-    lastName: "Doe",
-    fullName: "John Doe",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-    companyCode: "OI",
-    yearOfJoining: 2022,
-  },
-];
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
+/**
+ * POST /auth/login
+ * Authenticate user using Login ID or Email
+ */
 export const signIn = async (
   credentials: SignInCredentials,
 ): Promise<AuthResponse> => {
-  await delay(API_DELAY);
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, {
+      login_id: credentials.email, // Can be login_id or email
+      password: credentials.password,
+    });
 
-  const user = mockUsers.find(
-    (u) =>
-      (u.email === credentials.email || u.loginId === credentials.email) &&
-      u.password === credentials.password,
-  );
+    const { access_token, role } = response.data;
 
-  if (!user) {
-    throw new Error("Invalid email/login ID or password");
+    // Store JWT token
+    setAuthToken(access_token);
+
+    // Fetch user details
+    const user = await getCurrentUser();
+
+    return {
+      user,
+      token: access_token,
+    };
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Invalid login ID or password");
   }
-
-  const { password, ...userWithoutPassword } = user;
-  const token = `mock_token_${user.id}_${Date.now()}`;
-
-  return {
-    user: userWithoutPassword as User,
-    token,
-  };
 };
 
-export const signUp = async (data: SignUpData): Promise<AuthResponse> => {
-  await delay(API_DELAY);
+/**
+ * GET /auth/me
+ * Fetch authenticated user details
+ */
+export const getCurrentUser = async (): Promise<User> => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.AUTH.ME);
+    const data = response.data;
 
-  if (data.password !== data.confirmPassword) {
-    throw new Error("Passwords do not match");
+    // Map backend response to frontend User type
+    return {
+      id: data.id.toString(),
+      employeeId: data.login_id,
+      loginId: data.login_id,
+      email: data.email || "",
+      role: data.role,
+      firstName: data.name.split(" ")[0] || data.name,
+      lastName: data.name.split(" ").slice(1).join(" ") || "",
+      fullName: data.name,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`,
+      companyCode: data.login_id.substring(0, 2), // Extract from login_id (OI)
+      yearOfJoining:
+        parseInt(data.login_id.substring(6, 10)) || new Date().getFullYear(),
+    };
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch user details");
   }
-
-  const existingUser = mockUsers.find((u) => u.email === data.email);
-  if (existingUser) {
-    throw new Error("User already exists");
-  }
-
-  const companyCode = data.companyCode || extractCompanyCode(data.companyName);
-  const firstName = data.adminName.split(" ")[0] || data.adminName;
-  const lastName = data.adminName.split(" ").slice(1).join(" ") || "User";
-  const currentYear = new Date().getFullYear();
-  const serialNumber = 1;
-
-  const loginId = generateLoginId(
-    companyCode,
-    firstName,
-    lastName,
-    currentYear,
-    serialNumber,
-  );
-
-  const newCompany: Company = {
-    id: `${mockCompanies.length + 1}`,
-    name: data.companyName,
-    code: companyCode,
-    logo: data.companyLogo,
-    adminEmail: data.email,
-    adminName: data.adminName,
-    phone: data.phone,
-    createdAt: new Date().toISOString(),
-  };
-
-  mockCompanies.push(newCompany);
-
-  const newUser: User = {
-    id: `${mockUsers.length + 1}`,
-    employeeId: `EMP-${String(mockUsers.length + 1).padStart(3, "0")}`,
-    loginId: loginId,
-    email: data.email,
-    role: UserRole.ADMIN,
-    firstName: firstName,
-    lastName: lastName,
-    fullName: data.adminName,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.adminName}`,
-    companyCode: companyCode,
-    yearOfJoining: currentYear,
-  };
-
-  const token = `mock_token_${newUser.id}_${Date.now()}`;
-
-  return {
-    user: newUser,
-    token,
-  };
 };
 
+/**
+ * Verify token validity by fetching current user
+ */
 export const verifyToken = async (token: string): Promise<User> => {
-  await delay(API_DELAY);
-
-  const userId = token.split("_")[2];
-  const user = mockUsers.find((u) => u.id === userId);
-
-  if (!user) {
-    throw new Error("Invalid token");
+  try {
+    setAuthToken(token);
+    return await getCurrentUser();
+  } catch (error) {
+    removeAuthToken();
+    throw new Error("Invalid or expired token");
   }
-
-  const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword as User;
 };
 
+/**
+ * Sign out user
+ */
+export const signOut = async (): Promise<void> => {
+  removeAuthToken();
+};
+
+/**
+ * PUT /users/me/password
+ * Change account password
+ */
+export const changePassword = async (
+  oldPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> => {
+  try {
+    await apiClient.put(API_ENDPOINTS.USERS.ME_PASSWORD, {
+      old_password: oldPassword,
+      new_password: newPassword,
+    });
+
+    return {
+      message: "Password changed successfully",
+    };
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to change password");
+  }
+};
+
+/**
+ * Forgot password - Not in API spec, placeholder for future
+ */
 export const forgotPassword = async (
   email: string,
 ): Promise<{ message: string }> => {
-  await delay(API_DELAY);
-
-  const user = mockUsers.find((u) => u.email === email);
-
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  return {
-    message: "Password reset link has been sent to your email",
-  };
+  // TODO: Implement when backend endpoint is available
+  throw new Error("Forgot password feature not yet implemented");
 };
 
+/**
+ * Reset password - Not in API spec, placeholder for future
+ */
 export const resetPassword = async (
-  _token: string,
-  _newPassword: string,
+  token: string,
+  newPassword: string,
 ): Promise<{ message: string }> => {
-  await delay(API_DELAY);
-
-  return {
-    message: "Password has been reset successfully",
-  };
+  // TODO: Implement when backend endpoint is available
+  throw new Error("Reset password feature not yet implemented");
 };

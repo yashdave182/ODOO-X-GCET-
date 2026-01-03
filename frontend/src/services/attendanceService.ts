@@ -1,248 +1,281 @@
+/**
+ * Attendance Service
+ * Handles all attendance-related API calls
+ * Following Dayflow HRMS API Contract Specification
+ */
+
+import apiClient from "../lib/apiClient";
+import { API_ENDPOINTS } from "../config/api.config";
 import { Attendance, AttendanceStatus } from "../types";
-import { mockAttendance } from "./mockData";
 
-class AttendanceService {
-  private attendanceRecords: Attendance[] = [...mockAttendance];
-
-  /**
-   * Get today's attendance record for an employee
-   */
-  async getTodayAttendance(employeeId: string): Promise<Attendance | null> {
-    const today = new Date().toISOString().split("T")[0];
-    const attendance = this.attendanceRecords.find(
-      (record) => record.employeeId === employeeId && record.date === today,
-    );
-    return attendance || null;
-  }
-
-  /**
-   * Check in an employee
-   */
-  async checkIn(employeeId: string): Promise<Attendance> {
-    const today = new Date().toISOString().split("T")[0];
-    const now = new Date().toISOString();
-
-    // Check if already checked in today
-    const existingAttendance = await this.getTodayAttendance(employeeId);
-    if (existingAttendance && existingAttendance.checkIn) {
-      throw new Error("Already checked in today");
+/**
+ * POST /attendance/check-in
+ * Check in for attendance (Employee)
+ */
+export const checkIn = async (): Promise<Attendance> => {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.ATTENDANCE.CHECK_IN);
+    return mapBackendAttendanceToFrontend(response.data);
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
     }
+    throw new Error("Failed to check in");
+  }
+};
 
-    // Determine if late (after 9:30 AM)
-    const checkInTime = new Date();
-    const lateThreshold = new Date();
-    lateThreshold.setHours(9, 30, 0, 0);
-    const isLate = checkInTime > lateThreshold;
+/**
+ * POST /attendance/check-out
+ * Check out from attendance (Employee)
+ */
+export const checkOut = async (): Promise<Attendance> => {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.ATTENDANCE.CHECK_OUT);
+    return mapBackendAttendanceToFrontend(response.data);
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to check out");
+  }
+};
 
-    const attendance: Attendance = {
-      id: existingAttendance?.id || `ATT${Date.now()}`,
-      employeeId,
-      date: today,
-      checkIn: now,
-      status: isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT,
+/**
+ * GET /attendance/me
+ * Get own attendance records (Employee)
+ */
+export const getMyAttendance = async (
+  startDate?: string,
+  endDate?: string,
+): Promise<Attendance[]> => {
+  try {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+
+    const response = await apiClient.get(API_ENDPOINTS.ATTENDANCE.ME, {
+      params,
+    });
+
+    return response.data.map((record: any) =>
+      mapBackendAttendanceToFrontend(record),
+    );
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch attendance records");
+  }
+};
+
+/**
+ * GET /attendance/me (today only)
+ * Get today's attendance record
+ */
+export const getTodayAttendance = async (): Promise<Attendance | null> => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const records = await getMyAttendance(today, today);
+    return records.length > 0 ? records[0] : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * GET /admin/attendance
+ * Get all attendance records (Admin only)
+ */
+export const getAllAttendance = async (
+  startDate?: string,
+  endDate?: string,
+  employeeId?: string,
+): Promise<Attendance[]> => {
+  try {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (employeeId) params.employee_id = employeeId;
+
+    const response = await apiClient.get(API_ENDPOINTS.ADMIN.ATTENDANCE, {
+      params,
+    });
+
+    return response.data.map((record: any) =>
+      mapBackendAttendanceToFrontend(record),
+    );
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch attendance records");
+  }
+};
+
+/**
+ * Get attendance by employee ID (Admin only)
+ */
+export const getAttendanceByEmployeeId = async (
+  employeeId: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<Attendance[]> => {
+  return getAllAttendance(startDate, endDate, employeeId);
+};
+
+/**
+ * Get today's attendance summary for all employees (Admin only)
+ */
+export const getTodayAttendanceSummary = async (): Promise<{
+  present: number;
+  absent: number;
+  onLeave: number;
+  late: number;
+  total: number;
+}> => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const records = await getAllAttendance(today, today);
+
+    const summary = {
+      present: 0,
+      absent: 0,
+      onLeave: 0,
+      late: 0,
+      total: records.length,
     };
 
-    if (existingAttendance) {
-      // Update existing record
-      const index = this.attendanceRecords.findIndex(
-        (r) => r.id === existingAttendance.id,
-      );
-      this.attendanceRecords[index] = attendance;
+    records.forEach((record) => {
+      switch (record.status) {
+        case AttendanceStatus.PRESENT:
+          summary.present++;
+          break;
+        case AttendanceStatus.ABSENT:
+          summary.absent++;
+          break;
+        case AttendanceStatus.LEAVE:
+          summary.onLeave++;
+          break;
+        case AttendanceStatus.LATE:
+          summary.late++;
+          break;
+      }
+    });
+
+    return summary;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch attendance summary");
+  }
+};
+
+/**
+ * Calculate work hours between check-in and check-out
+ */
+export const calculateWorkHours = (
+  checkIn: string,
+  checkOut?: string,
+): string => {
+  if (!checkOut) return "0h 0m";
+
+  const checkInTime = new Date(checkIn);
+  const checkOutTime = new Date(checkOut);
+  const workHours =
+    (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+
+  const hours = Math.floor(workHours);
+  const minutes = Math.floor((workHours - hours) * 60);
+
+  return `${hours}h ${minutes}m`;
+};
+
+/**
+ * Check if check-in time is late (after 9:30 AM)
+ */
+export const isLateCheckIn = (checkInTime: string): boolean => {
+  const checkIn = new Date(checkInTime);
+  const lateThreshold = new Date(checkIn);
+  lateThreshold.setHours(9, 30, 0, 0);
+  return checkIn > lateThreshold;
+};
+
+/**
+ * Helper function to map backend attendance data to frontend Attendance type
+ */
+function mapBackendAttendanceToFrontend(data: any): Attendance {
+  // Derive status based on backend rules:
+  // - Approved leave → ON_LEAVE
+  // - Attendance record exists → PRESENT (or LATE if late)
+  // - Otherwise → ABSENT
+  let status = AttendanceStatus.ABSENT;
+
+  if (data.status === "ON_LEAVE" || data.on_leave) {
+    status = AttendanceStatus.LEAVE;
+  } else if (data.check_in) {
+    // Check if late
+    if (data.is_late || isLateCheckIn(data.check_in)) {
+      status = AttendanceStatus.LATE;
     } else {
-      // Create new record
-      this.attendanceRecords.push(attendance);
+      status = AttendanceStatus.PRESENT;
     }
-
-    return attendance;
   }
 
-  /**
-   * Check out an employee
-   */
-  async checkOut(employeeId: string): Promise<Attendance> {
-    const now = new Date().toISOString();
+  return {
+    id: data.id?.toString() || `ATT${Date.now()}`,
+    employeeId: data.employee_id?.toString() || data.login_id || "",
+    date: data.date || new Date().toISOString().split("T")[0],
+    checkIn: data.check_in || undefined,
+    checkOut: data.check_out || undefined,
+    status: status,
+    workHours:
+      data.work_hours || calculateWorkHours(data.check_in, data.check_out),
+    note: data.notes || data.note || undefined,
+  };
+}
 
-    const attendance = await this.getTodayAttendance(employeeId);
-    if (!attendance || !attendance.checkIn) {
-      throw new Error("No check-in record found for today");
+// Export as default class for backward compatibility
+class AttendanceService {
+  async getTodayAttendance(employeeId?: string): Promise<Attendance | null> {
+    if (employeeId) {
+      // Admin view: get attendance for specific employee
+      const today = new Date().toISOString().split("T")[0];
+      const records = await getAttendanceByEmployeeId(employeeId, today, today);
+      return records.length > 0 ? records[0] : null;
     }
-
-    // Calculate work hours
-    const checkInTime = new Date(attendance.checkIn);
-    const checkOutTime = new Date(now);
-    const workHours =
-      (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
-    const hours = Math.floor(workHours);
-    const minutes = Math.floor((workHours - hours) * 60);
-
-    const updatedAttendance: Attendance = {
-      ...attendance,
-      checkOut: now,
-      workHours: `${hours}h ${minutes}m`,
-    };
-
-    const index = this.attendanceRecords.findIndex(
-      (r) => r.id === attendance.id,
-    );
-    this.attendanceRecords[index] = updatedAttendance;
-
-    return updatedAttendance;
+    // Employee view: get own attendance
+    return getTodayAttendance();
   }
 
-  /**
-   * Get attendance records for an employee
-   */
+  async checkIn(): Promise<Attendance> {
+    return checkIn();
+  }
+
+  async checkOut(): Promise<Attendance> {
+    return checkOut();
+  }
+
   async getAttendanceByEmployeeId(
     employeeId: string,
     startDate?: string,
     endDate?: string,
   ): Promise<Attendance[]> {
-    let records = this.attendanceRecords.filter(
-      (record) => record.employeeId === employeeId,
-    );
-
-    if (startDate) {
-      records = records.filter((record) => record.date >= startDate);
-    }
-
-    if (endDate) {
-      records = records.filter((record) => record.date <= endDate);
-    }
-
-    return records.sort((a, b) => b.date.localeCompare(a.date));
+    return getAttendanceByEmployeeId(employeeId, startDate, endDate);
   }
 
-  /**
-   * Get all attendance records (for admin/HR)
-   */
-  async getAllAttendance(date?: string): Promise<Attendance[]> {
-    if (date) {
-      return this.attendanceRecords.filter((record) => record.date === date);
-    }
-    return [...this.attendanceRecords].sort((a, b) =>
-      b.date.localeCompare(a.date),
-    );
-  }
-
-  /**
-   * Mark attendance manually (for admin/HR)
-   */
-  async markAttendance(
-    employeeId: string,
-    date: string,
-    status: AttendanceStatus,
-    note?: string,
-  ): Promise<Attendance> {
-    const existingAttendance = this.attendanceRecords.find(
-      (record) => record.employeeId === employeeId && record.date === date,
-    );
-
-    const attendance: Attendance = {
-      id: existingAttendance?.id || `ATT${Date.now()}`,
-      employeeId,
-      date,
-      status,
-      note,
-    };
-
-    if (existingAttendance) {
-      const index = this.attendanceRecords.findIndex(
-        (r) => r.id === existingAttendance.id,
-      );
-      this.attendanceRecords[index] = attendance;
-    } else {
-      this.attendanceRecords.push(attendance);
-    }
-
-    return attendance;
-  }
-
-  /**
-   * Get attendance statistics for an employee
-   */
-  async getAttendanceStats(employeeId: string, month: number, year: number) {
-    const startDate = new Date(year, month - 1, 1).toISOString().split("T")[0];
-    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
-
-    const records = await this.getAttendanceByEmployeeId(
-      employeeId,
-      startDate,
-      endDate,
-    );
-
-    const present = records.filter(
-      (r) => r.status === AttendanceStatus.PRESENT,
-    ).length;
-    const absent = records.filter(
-      (r) => r.status === AttendanceStatus.ABSENT,
-    ).length;
-    const leave = records.filter(
-      (r) => r.status === AttendanceStatus.LEAVE,
-    ).length;
-    const late = records.filter(
-      (r) => r.status === AttendanceStatus.LATE,
-    ).length;
-    const halfDay = records.filter(
-      (r) => r.status === AttendanceStatus.HALF_DAY,
-    ).length;
-
-    // Calculate total work hours
-    let totalMinutes = 0;
-    records.forEach((record) => {
-      if (record.workHours) {
-        const match = record.workHours.match(/(\d+)h (\d+)m/);
-        if (match) {
-          totalMinutes += parseInt(match[1]) * 60 + parseInt(match[2]);
-        }
-      }
-    });
-
-    const totalHours = Math.floor(totalMinutes / 60);
-    const totalMins = totalMinutes % 60;
-
-    return {
-      present,
-      absent,
-      leave,
-      late,
-      halfDay,
-      totalWorkHours: `${totalHours}h ${totalMins}m`,
-      totalDays: records.length,
-    };
-  }
-
-  /**
-   * Get today's attendance summary for dashboard
-   */
-  async getTodayAttendanceSummary() {
-    const today = new Date().toISOString().split("T")[0];
-    const todayRecords = this.attendanceRecords.filter(
-      (record) => record.date === today,
-    );
-
-    const present = todayRecords.filter(
-      (r) =>
-        r.status === AttendanceStatus.PRESENT ||
-        r.status === AttendanceStatus.LATE,
-    ).length;
-    const absent = todayRecords.filter(
-      (r) => r.status === AttendanceStatus.ABSENT,
-    ).length;
-    const leave = todayRecords.filter(
-      (r) => r.status === AttendanceStatus.LEAVE,
-    ).length;
-    const late = todayRecords.filter(
-      (r) => r.status === AttendanceStatus.LATE,
-    ).length;
-
-    return {
-      present,
-      absent,
-      leave,
-      late,
-      total: todayRecords.length,
-    };
+  async getTodayAttendanceSummary(): Promise<{
+    present: number;
+    absent: number;
+    onLeave: number;
+    late: number;
+    total: number;
+  }> {
+    return getTodayAttendanceSummary();
   }
 }
 
-export const attendanceService = new AttendanceService();
+const attendanceServiceInstance = new AttendanceService();
+
+export default attendanceServiceInstance;
+export { attendanceServiceInstance as attendanceService };

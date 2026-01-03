@@ -7,6 +7,7 @@ import {
 } from "react";
 import { User, AuthResponse } from "../types";
 import * as authService from "../services/authService";
+import { getAuthToken, removeAuthToken } from "../lib/apiClient";
 
 interface AuthContextType {
   user: User | null;
@@ -38,18 +39,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       try {
-        const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
+        const token = getAuthToken();
 
-        if (storedUser && token) {
-          setUser(JSON.parse(storedUser));
+        if (token) {
+          // Verify token and fetch user details
+          const userData = await authService.verifyToken(token);
+          setUser(userData);
         }
       } catch (error) {
         console.error("Failed to initialize auth:", error);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+        removeAuthToken();
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -64,26 +66,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       password,
     });
     setUser(response.user);
-    localStorage.setItem("user", JSON.stringify(response.user));
-    localStorage.setItem("token", response.token);
+    // Token is already stored by authService via setAuthToken()
   };
 
   const signUp = async (data: any) => {
-    const response: AuthResponse = await authService.signUp(data);
-    setUser(response.user);
-    localStorage.setItem("user", JSON.stringify(response.user));
-    localStorage.setItem("token", response.token);
+    // Note: SignUp is not in the API spec - only Admin can create employees
+    throw new Error(
+      "Public signup is not allowed. Contact your administrator.",
+    );
   };
 
   const signOut = () => {
     setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    removeAuthToken();
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
   const value = {

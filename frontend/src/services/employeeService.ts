@@ -1,20 +1,55 @@
+/**
+ * Employee Service
+ * Handles all employee-related API calls
+ * Following Dayflow HRMS API Contract Specification
+ */
+
+import apiClient from "../lib/apiClient";
+import { API_ENDPOINTS } from "../config/api.config";
 import { Employee, CreateEmployeeData } from "../types";
-import {
-  generateLoginId,
-  generateRandomPassword,
-  getNextSerialNumber,
-} from "../utils/loginIdGenerator";
-import { mockEmployees as importedMockEmployees } from "./mockData";
-
-const API_DELAY = 800;
-
-const mockEmployees: Employee[] = [...importedMockEmployees];
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Create a new employee with auto-generated Login ID and password
- * Only accessible by HR/Admin
+ * GET /users/me
+ * Get current employee profile
+ */
+export const getCurrentEmployeeProfile = async (): Promise<Employee> => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.USERS.ME);
+    const data = response.data;
+
+    return mapBackendEmployeeToFrontend(data);
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch employee profile");
+  }
+};
+
+/**
+ * PUT /users/me
+ * Update current employee profile (limited fields)
+ */
+export const updateCurrentEmployeeProfile = async (updates: {
+  phone?: string;
+  address?: string;
+}): Promise<Employee> => {
+  try {
+    const response = await apiClient.put(API_ENDPOINTS.USERS.ME, updates);
+    const data = response.data;
+
+    return mapBackendEmployeeToFrontend(data);
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to update profile");
+  }
+};
+
+/**
+ * POST /admin/users
+ * Create a new employee account (Admin only)
  */
 export const createEmployee = async (
   data: CreateEmployeeData,
@@ -23,72 +58,87 @@ export const createEmployee = async (
   loginId: string;
   defaultPassword: string;
 }> => {
-  await delay(API_DELAY);
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.ADMIN.USERS, {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      year_of_joining: new Date(data.dateOfJoining).getFullYear(),
+      email: data.email,
+      phone: data.phone || "",
+    });
 
-  const yearOfJoining = new Date(data.dateOfJoining).getFullYear();
+    const { login_id, temporary_password } = response.data;
 
-  const serialNumber = getNextSerialNumber(
-    mockEmployees.map((emp) => ({
-      yearOfJoining: emp.yearOfJoining,
-      serialNumber: emp.serialNumber,
-    })),
-    yearOfJoining,
-  );
+    // Fetch the newly created employee details
+    const employees = await getAllEmployees();
+    const newEmployee = employees.find((emp) => emp.loginId === login_id);
 
-  const loginId = generateLoginId(
-    data.companyCode,
-    data.firstName,
-    data.lastName,
-    yearOfJoining,
-    serialNumber,
-  );
+    if (!newEmployee) {
+      throw new Error("Employee created but could not fetch details");
+    }
 
-  const defaultPassword = generateRandomPassword();
-
-  const newEmployee: Employee = {
-    id: `${mockEmployees.length + 1}`,
-    employeeId: `EMP-${String(mockEmployees.length + 1).padStart(3, "0")}`,
-    loginId: loginId,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    fullName: `${data.firstName} ${data.lastName}`,
-    email: data.email,
-    role: "EMPLOYEE" as any,
-    jobTitle: data.jobTitle,
-    department: data.department,
-    location: "Office",
-    dateOfJoining: data.dateOfJoining,
-    yearOfJoining: yearOfJoining,
-    serialNumber: serialNumber,
-    employmentStatus: "ACTIVE" as any,
-    companyCode: data.companyCode,
-    defaultPassword: defaultPassword,
-    isFirstLogin: true,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.firstName}${data.lastName}`,
-  };
-
-  mockEmployees.push(newEmployee);
-
-  return {
-    employee: newEmployee,
-    loginId: loginId,
-    defaultPassword: defaultPassword,
-  };
+    return {
+      employee: newEmployee,
+      loginId: login_id,
+      defaultPassword: temporary_password,
+    };
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to create employee");
+  }
 };
 
 /**
- * Get all employees for a company
+ * GET /admin/users
+ * Get all employees (Admin only)
  */
 export const getAllEmployees = async (
   companyCode?: string,
 ): Promise<Employee[]> => {
-  await delay(API_DELAY);
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.ADMIN.USERS);
+    const employees = response.data;
 
-  if (companyCode) {
-    return mockEmployees.filter((emp) => emp.companyCode === companyCode);
+    // Map backend response to frontend Employee type
+    const mappedEmployees = employees.map((emp: any) =>
+      mapBackendEmployeeToFrontend(emp),
+    );
+
+    // Filter by company code if provided
+    if (companyCode) {
+      return mappedEmployees.filter(
+        (emp: Employee) => emp.companyCode === companyCode,
+      );
+    }
+
+    return mappedEmployees;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch employees");
   }
+};
 
-  return mockEmployees;
+/**
+ * GET /admin/users/:id
+ * Get employee by ID (Admin only)
+ */
+export const getEmployeeById = async (id: number): Promise<Employee | null> => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.ADMIN.USER_BY_ID(id));
+    return mapBackendEmployeeToFrontend(response.data);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      return null;
+    }
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to fetch employee");
+  }
 };
 
 /**
@@ -97,96 +147,109 @@ export const getAllEmployees = async (
 export const getEmployeeByLoginId = async (
   loginId: string,
 ): Promise<Employee | null> => {
-  await delay(API_DELAY);
-
-  const employee = mockEmployees.find((emp) => emp.loginId === loginId);
-  return employee || null;
+  try {
+    // Since backend doesn't have a direct endpoint for login_id lookup,
+    // we fetch all employees and filter
+    const employees = await getAllEmployees();
+    return employees.find((emp) => emp.loginId === loginId) || null;
+  } catch (error) {
+    return null;
+  }
 };
 
 /**
- * Update employee details
+ * Update employee details (Admin only)
+ * Note: Backend API spec doesn't include update endpoint, but we prepare for it
  */
 export const updateEmployee = async (
-  loginId: string,
+  id: number,
   updates: Partial<Employee>,
 ): Promise<Employee> => {
-  await delay(API_DELAY);
-
-  const index = mockEmployees.findIndex((emp) => emp.loginId === loginId);
-
-  if (index === -1) {
-    throw new Error("Employee not found");
+  try {
+    // TODO: Update when backend implements PUT /admin/users/:id
+    const response = await apiClient.put(
+      API_ENDPOINTS.ADMIN.USER_BY_ID(id),
+      updates,
+    );
+    return mapBackendEmployeeToFrontend(response.data);
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to update employee");
   }
-
-  mockEmployees[index] = {
-    ...mockEmployees[index],
-    ...updates,
-  };
-
-  return mockEmployees[index];
 };
 
 /**
- * Delete employee
+ * Delete employee (Admin only)
+ * Note: Backend API spec doesn't include delete endpoint, but we prepare for it
  */
-export const deleteEmployee = async (loginId: string): Promise<void> => {
-  await delay(API_DELAY);
-
-  const index = mockEmployees.findIndex((emp) => emp.loginId === loginId);
-
-  if (index === -1) {
-    throw new Error("Employee not found");
+export const deleteEmployee = async (id: number): Promise<void> => {
+  try {
+    // TODO: Update when backend implements DELETE /admin/users/:id
+    await apiClient.delete(API_ENDPOINTS.ADMIN.USER_BY_ID(id));
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to delete employee");
   }
-
-  mockEmployees.splice(index, 1);
-};
-
-/**
- * Change employee password (for first-time login)
- */
-export const changePassword = async (
-  loginId: string,
-  oldPassword: string,
-  newPassword: string,
-): Promise<void> => {
-  await delay(API_DELAY);
-
-  const employee = mockEmployees.find((emp) => emp.loginId === loginId);
-
-  if (!employee) {
-    throw new Error("Employee not found");
-  }
-
-  if (employee.defaultPassword !== oldPassword) {
-    throw new Error("Current password is incorrect");
-  }
-
-  if (newPassword.length < 8) {
-    throw new Error("Password must be at least 8 characters long");
-  }
-
-  employee.defaultPassword = newPassword;
-  employee.isFirstLogin = false;
 };
 
 /**
  * Send default password email to employee
+ * This is handled by backend, but frontend can trigger notification
  */
 export const sendPasswordEmail = async (
   employeeEmail: string,
   loginId: string,
   password: string,
 ): Promise<void> => {
-  await delay(API_DELAY);
-
+  // Log for development purposes
   console.log(`
     ========================================
-    📧 PASSWORD EMAIL SENT
+    📧 PASSWORD EMAIL (Backend will send)
     ========================================
     To: ${employeeEmail}
     Login ID: ${loginId}
     Default Password: ${password}
     ========================================
-    Please change your password after first login.
+    Employee should change password after first login.
   `);
 };
+
+/**
+ * Helper function to map backend employee data to frontend Employee type
+ */
+function mapBackendEmployeeToFrontend(data: any): Employee {
+  const firstName = data.name?.split(" ")[0] || data.name || "";
+  const lastName = data.name?.split(" ").slice(1).join(" ") || "";
+
+  return {
+    id: data.id?.toString() || "",
+    employeeId: data.login_id || "",
+    loginId: data.login_id || "",
+    firstName: firstName,
+    lastName: lastName,
+    fullName: data.name || "",
+    email: data.email || "",
+    phone: data.phone || "",
+    role: data.role || "EMPLOYEE",
+    jobTitle: data.job_title || "Employee",
+    department: data.department || "General",
+    location: data.location || "Office",
+    dateOfJoining:
+      data.date_of_joining || new Date().toISOString().split("T")[0],
+    yearOfJoining:
+      data.year_of_joining ||
+      parseInt(data.login_id?.substring(6, 10)) ||
+      new Date().getFullYear(),
+    serialNumber: parseInt(data.login_id?.substring(10)) || 1,
+    employmentStatus: data.employment_status || "ACTIVE",
+    companyCode: data.login_id?.substring(0, 2) || "OI",
+    address: data.address || "",
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name || "User"}`,
+    isFirstLogin: data.is_first_login || false,
+    defaultPassword: undefined, // Never expose password to frontend
+  };
+}

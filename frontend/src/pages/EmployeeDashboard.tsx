@@ -3,7 +3,7 @@ import { Search, Settings } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Employee, AttendanceStatus } from "../types";
 import * as employeeService from "../services/employeeService";
-import { attendanceService } from "../services/attendanceService";
+import attendanceService from "../services/attendanceService";
 import EmployeeCard from "../components/EmployeeCard";
 import UserProfileMenu from "../components/UserProfileMenu";
 import CheckInOut from "../components/CheckInOut";
