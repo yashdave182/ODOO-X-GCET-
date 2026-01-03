@@ -6,7 +6,7 @@
 
 import apiClient from "../lib/apiClient";
 import { API_ENDPOINTS } from "../config/api.config";
-import { Employee, CreateEmployeeData } from "../types";
+import { Employee, CreateEmployeeData, CreateEmployeeResponse } from "../types";
 
 /**
  * GET /users/me
@@ -53,34 +53,19 @@ export const updateCurrentEmployeeProfile = async (updates: {
  */
 export const createEmployee = async (
   data: CreateEmployeeData,
-): Promise<{
-  employee: Employee;
-  loginId: string;
-  defaultPassword: string;
-}> => {
+): Promise<CreateEmployeeResponse> => {
   try {
     const response = await apiClient.post(API_ENDPOINTS.ADMIN.USERS, {
-      first_name: data.firstName,
-      last_name: data.lastName,
-      year_of_joining: new Date(data.dateOfJoining).getFullYear(),
+      first_name: data.first_name,
+      last_name: data.last_name,
+      year_of_joining: data.year_of_joining,
       email: data.email,
-      phone: data.phone || "",
+      phone: data.phone,
     });
 
-    const { login_id, temporary_password } = response.data;
-
-    // Fetch the newly created employee details
-    const employees = await getAllEmployees();
-    const newEmployee = employees.find((emp) => emp.loginId === login_id);
-
-    if (!newEmployee) {
-      throw new Error("Employee created but could not fetch details");
-    }
-
     return {
-      employee: newEmployee,
-      loginId: login_id,
-      defaultPassword: temporary_password,
+      login_id: response.data.login_id,
+      temporary_password: response.data.temporary_password,
     };
   } catch (error: any) {
     if (error.response?.data?.detail) {

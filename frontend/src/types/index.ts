@@ -256,13 +256,16 @@ export interface SignUpData {
 }
 
 export interface CreateEmployeeData {
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
+  year_of_joining: number;
   email: string;
-  jobTitle: string;
-  department: string;
-  dateOfJoining: string;
-  companyCode: string;
+  phone: string;
+}
+
+export interface CreateEmployeeResponse {
+  login_id: string;
+  temporary_password: string;
 }
 
 export interface Notification {

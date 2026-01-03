@@ -256,6 +256,13 @@ class AttendanceService {
     return checkOut();
   }
 
+  async getMyAttendance(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<Attendance[]> {
+    return getMyAttendance(startDate, endDate);
+  }
+
   async getAttendanceByEmployeeId(
     employeeId: string,
     startDate?: string,

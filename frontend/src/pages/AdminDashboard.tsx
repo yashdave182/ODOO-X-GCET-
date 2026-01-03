@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Settings, Download, Upload } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Settings,
+  Download,
+  Upload,
+  X,
+  CheckCircle,
+  Copy,
+  AlertCircle,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { Employee } from "../types";
+import { Employee, CreateEmployeeData, CreateEmployeeResponse } from "../types";
 import * as employeeService from "../services/employeeService";
 import UserProfileMenu from "../components/UserProfileMenu";
 import styles from "./AdminDashboard.module.css";
@@ -20,6 +30,21 @@ const AdminDashboard: React.FC = () => {
 
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Add Employee Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [newEmployeeCredentials, setNewEmployeeCredentials] =
+    useState<CreateEmployeeResponse | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<CreateEmployeeData>({
+    first_name: "",
+    last_name: "",
+    year_of_joining: new Date().getFullYear(),
+    email: "",
+    phone: "",
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadEmployees();
@@ -78,7 +103,89 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleAddEmployee = () => {
-    navigate("/admin/employee/new");
+    setFormData({
+      first_name: "",
+      last_name: "",
+      year_of_joining: new Date().getFullYear(),
+      email: "",
+      phone: "",
+    });
+    setFormErrors({});
+    setShowAddModal(true);
+  };
+
+  const handleFormChange = (
+    field: keyof CreateEmployeeData,
+    value: string | number,
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (formErrors[field]) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.first_name.trim()) {
+      errors.first_name = "First name is required";
+    }
+    if (!formData.last_name.trim()) {
+      errors.last_name = "Last name is required";
+    }
+    if (!formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Please enter a valid email";
+    }
+    if (!formData.phone.trim()) {
+      errors.phone = "Phone number is required";
+    } else if (!/^\+?[\d\s-()]+$/.test(formData.phone)) {
+      errors.phone = "Please enter a valid phone number";
+    }
+    if (
+      formData.year_of_joining < 1900 ||
+      formData.year_of_joining > new Date().getFullYear() + 1
+    ) {
+      errors.year_of_joining = "Please enter a valid year";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmitEmployee = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await employeeService.createEmployee(formData);
+      setNewEmployeeCredentials(response);
+      setShowAddModal(false);
+      setShowSuccessModal(true);
+      // Reload employees list
+      await loadEmployees();
+    } catch (error: any) {
+      alert(error.message || "Failed to create employee");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    alert(`${label} copied to clipboard!`);
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+    setNewEmployeeCredentials(null);
   };
 
   const getDepartments = () => {
@@ -372,6 +479,271 @@ const AdminDashboard: React.FC = () => {
         {activeTab === "timeOff" && renderTimeOffTab()}
         {activeTab === "payroll" && renderPayrollTab()}
       </main>
+
+      {/* Add Employee Modal */}
+      {showAddModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3>Add New Employee</h3>
+              <button
+                className={styles.closeButton}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setFormData({
+                    first_name: "",
+                    last_name: "",
+                    year_of_joining: new Date().getFullYear(),
+                    email: "",
+                    phone: "",
+                  });
+                  setFormErrors({});
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.formContainer}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    First Name <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`${styles.formInput} ${formErrors.first_name ? styles.formInputError : ""}`}
+                    placeholder="Enter first name"
+                    value={formData.first_name}
+                    onChange={(e) =>
+                      handleFormChange("first_name", e.target.value)
+                    }
+                  />
+                  {formErrors.first_name && (
+                    <span className={styles.errorText}>
+                      {formErrors.first_name}
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Last Name <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`${styles.formInput} ${formErrors.last_name ? styles.formInputError : ""}`}
+                    placeholder="Enter last name"
+                    value={formData.last_name}
+                    onChange={(e) =>
+                      handleFormChange("last_name", e.target.value)
+                    }
+                  />
+                  {formErrors.last_name && (
+                    <span className={styles.errorText}>
+                      {formErrors.last_name}
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Email <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className={`${styles.formInput} ${formErrors.email ? styles.formInputError : ""}`}
+                    placeholder="employee@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleFormChange("email", e.target.value)}
+                  />
+                  {formErrors.email && (
+                    <span className={styles.errorText}>{formErrors.email}</span>
+                  )}
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Phone Number <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    className={`${styles.formInput} ${formErrors.phone ? styles.formInputError : ""}`}
+                    placeholder="+1 (555) 123-4567"
+                    value={formData.phone}
+                    onChange={(e) => handleFormChange("phone", e.target.value)}
+                  />
+                  {formErrors.phone && (
+                    <span className={styles.errorText}>{formErrors.phone}</span>
+                  )}
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Year of Joining <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    className={`${styles.formInput} ${formErrors.year_of_joining ? styles.formInputError : ""}`}
+                    placeholder="2024"
+                    value={formData.year_of_joining}
+                    onChange={(e) =>
+                      handleFormChange(
+                        "year_of_joining",
+                        parseInt(e.target.value) || new Date().getFullYear(),
+                      )
+                    }
+                    min="1900"
+                    max={new Date().getFullYear() + 1}
+                  />
+                  {formErrors.year_of_joining && (
+                    <span className={styles.errorText}>
+                      {formErrors.year_of_joining}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.secondaryButton}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setFormData({
+                    first_name: "",
+                    last_name: "",
+                    year_of_joining: new Date().getFullYear(),
+                    email: "",
+                    phone: "",
+                  });
+                  setFormErrors({});
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.primaryButton}
+                onClick={handleSubmitEmployee}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating..." : "Create Employee"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal - Show Credentials */}
+      {showSuccessModal && newEmployeeCredentials && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div
+              className={styles.modalHeader}
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  color: "white",
+                }}
+              >
+                <CheckCircle size={28} />
+                <h3 style={{ color: "white", margin: 0 }}>
+                  Employee Created Successfully!
+                </h3>
+              </div>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.successContent}>
+                <div className={styles.alertBox}>
+                  <AlertCircle size={20} color="#f59e0b" />
+                  <p className={styles.alertText}>
+                    Please save these credentials securely. The temporary
+                    password will not be shown again.
+                  </p>
+                </div>
+
+                <div className={styles.credentialsContainer}>
+                  <div className={styles.credentialItem}>
+                    <label className={styles.credentialLabel}>Login ID</label>
+                    <div className={styles.credentialValue}>
+                      <code className={styles.credentialCode}>
+                        {newEmployeeCredentials.login_id}
+                      </code>
+                      <button
+                        className={styles.copyButton}
+                        onClick={() =>
+                          handleCopyToClipboard(
+                            newEmployeeCredentials.login_id,
+                            "Login ID",
+                          )
+                        }
+                        title="Copy Login ID"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.credentialItem}>
+                    <label className={styles.credentialLabel}>
+                      Temporary Password
+                    </label>
+                    <div className={styles.credentialValue}>
+                      <code className={styles.credentialCode}>
+                        {newEmployeeCredentials.temporary_password}
+                      </code>
+                      <button
+                        className={styles.copyButton}
+                        onClick={() =>
+                          handleCopyToClipboard(
+                            newEmployeeCredentials.temporary_password,
+                            "Temporary Password",
+                          )
+                        }
+                        title="Copy Password"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.instructionsBox}>
+                  <h4>Next Steps:</h4>
+                  <ol>
+                    <li>
+                      Share these credentials securely with the new employee
+                    </li>
+                    <li>
+                      Employee should log in and change their password
+                      immediately
+                    </li>
+                    <li>
+                      Employee will be prompted to verify their email address
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.primaryButton}
+                onClick={handleCloseSuccessModal}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
