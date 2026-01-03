@@ -110,6 +110,29 @@ const EmployeeProfile: React.FC = () => {
 
   const loadEmployee = async () => {
     if (!id || id === "new") {
+      // Create a blank employee template for new employee
+      const newEmployee: Employee = {
+        id: "new",
+        employeeId: "",
+        loginId: "",
+        firstName: "",
+        lastName: "",
+        fullName: "",
+        email: "",
+        phone: "",
+        role: UserRole.EMPLOYEE,
+        jobTitle: "",
+        department: "",
+        location: "",
+        dateOfJoining: new Date().toISOString().split("T")[0],
+        yearOfJoining: new Date().getFullYear(),
+        serialNumber: 0,
+        employmentStatus: "ACTIVE" as any,
+        companyCode: user?.companyCode || "OI",
+      };
+      setEmployee(newEmployee);
+      setEditedEmployee(newEmployee);
+      setIsEditing(true); // Auto-enable editing mode for new employee
       setIsLoading(false);
       return;
     }
@@ -145,12 +168,21 @@ const EmployeeProfile: React.FC = () => {
     if (!editedEmployee) return;
 
     try {
-      setEmployee(editedEmployee);
-      setIsEditing(false);
-      alert("Employee information updated successfully!");
+      if (id === "new") {
+        // TODO: Call API to create new employee
+        // await employeeService.createEmployee(editedEmployee);
+        alert("New employee created successfully! (API integration pending)");
+        navigate("/admin/dashboard");
+      } else {
+        // TODO: Call API to update employee
+        // await employeeService.updateEmployee(id, editedEmployee);
+        setEmployee(editedEmployee);
+        setIsEditing(false);
+        alert("Employee information updated successfully!");
+      }
     } catch (error) {
-      console.error("Error updating employee:", error);
-      alert("Failed to update employee information.");
+      console.error("Error saving employee:", error);
+      alert("Failed to save employee information.");
     }
   };
 
@@ -208,7 +240,7 @@ const EmployeeProfile: React.FC = () => {
     );
   }
 
-  if (!employee) {
+  if (!employee && id !== "new") {
     return (
       <div className={styles.errorContainer}>
         <p>Employee not found</p>
@@ -771,7 +803,7 @@ const EmployeeProfile: React.FC = () => {
               </button>
               <button className={styles.saveButton} onClick={handleSave}>
                 <Save size={18} />
-                Save Changes
+                {id === "new" ? "Create Employee" : "Save Changes"}
               </button>
             </>
           )}
@@ -789,8 +821,10 @@ const EmployeeProfile: React.FC = () => {
           )}
         </div>
         <div className={styles.profileInfo}>
-          <h2>{employee.fullName}</h2>
-          <p className={styles.jobTitle}>{employee.jobTitle}</p>
+          <h2>{id === "new" ? "New Employee" : employee.fullName}</h2>
+          <p className={styles.jobTitle}>
+            {id === "new" ? "Add employee details below" : employee.jobTitle}
+          </p>
           <div className={styles.profileMeta}>
             <span>
               <Mail size={16} />
