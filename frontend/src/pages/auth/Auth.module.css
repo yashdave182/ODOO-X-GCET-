@@ -1,0 +1,434 @@
+.authContainer {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    padding: 1rem;
+    position: relative;
+}
+
+.authHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 3rem;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logoText {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.authCard {
+    background-color: var(--white);
+    border-radius: var(--border-radius-xl);
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 1.75rem 2.25rem 1.25rem;
+    width: 100%;
+    max-width: 440px;
+    margin-top: 17rem;
+}
+
+.cardIcon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+}
+
+.title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.description {
+    font-size: 0.875rem;
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.errorBanner {
+    padding: 0.875rem 1rem;
+    background-color: var(--danger-light);
+    color: var(--danger-dark);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    border: 1px solid var(--danger);
+}
+
+.forgotPassword {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.link {
+    font-size: 0.875rem;
+    color: var(--primary);
+    font-weight: 500;
+    transition: color var(--transition-base);
+}
+
+.link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.linkPrimary {
+    font-size: 0.9375rem;
+    color: var(--primary);
+    font-weight: 600;
+    transition: color var(--transition-base);
+}
+
+.linkPrimary:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.divider {
+    position: relative;
+    text-align: center;
+    margin: 0.375rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+.divider span {
+    background-color: var(--white);
+    padding: 0 1rem;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+}
+
+.footer {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.infoBox {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.infoIcon {
+    font-size: 1.125rem;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.infoText {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.authFooter {
+    position: fixed;
+    bottom: 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.eyeButton {
+    position: absolute;
+    right: 0.75rem;
+    top: 2.35rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    transition: color var(--transition-base);
+    z-index: 10;
+}
+
+.eyeButton:hover {
+    color: var(--text-primary);
+}
+
+.splitLayout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+    background-color: var(--white);
+}
+
+.leftSection {
+    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: var(--white);
+}
+
+.leftLogo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+
+.leftLogoText {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.leftContent {
+    max-width: 480px;
+}
+
+.leftHeading {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+}
+
+.leftDescription {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+.testimonial {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 3rem;
+}
+
+.testimonialImages {
+    display: flex;
+}
+
+.testimonialImage {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--white);
+    margin-left: -0.5rem;
+}
+
+.testimonialImage:first-child {
+    margin-left: 0;
+}
+
+.testimonialText {
+    font-size: 0.9375rem;
+    opacity: 0.9;
+}
+
+.rightSection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    overflow-y: auto;
+    background-color: var(--bg-secondary);
+}
+
+.signupCard {
+    background-color: var(--white);
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: var(--shadow-md);
+}
+
+.logoPlaceholder {
+    width: 120px;
+    height: 80px;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    margin: 0 auto 1.5rem;
+    background-color: var(--gray-50);
+}
+
+.uploadSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.uploadLabel {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.uploadWrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.avatarPlaceholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+}
+
+.uploadButton {
+    padding: 0.5rem 1rem;
+    background-color: var(--white);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-block;
+    text-align: center;
+}
+
+.uploadButton:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: var(--gray-50);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.formGridFull {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 1024px) {
+    .splitLayout {
+        grid-template-columns: 1fr;
+    }
+
+    .leftSection {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .authHeader {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem 1.5rem;
+        text-align: center;
+    }
+
+    .authCard {
+        padding: 2rem 1.5rem;
+        margin-top: 6rem;
+    }
+
+    .signupCard {
+        padding: 2rem 1.5rem;
+    }
+
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .authContainer {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .authCard {
+        padding: 1.5rem 1rem;
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
+
+    .cardIcon {
+        width: 60px;
+        height: 60px;
+    }
+}
