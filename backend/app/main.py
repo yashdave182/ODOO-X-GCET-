@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, users, admin
+from app.routes import auth, users, admin, attendance
 from app.database import Base, engine
 from app.seed import seed_admin
 
@@ -20,6 +20,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(admin.router)
+app.include_router(attendance.router)
+
 
 
 @app.on_event("startup")
