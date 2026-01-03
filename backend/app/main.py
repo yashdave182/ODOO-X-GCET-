@@ -1,6 +1,3 @@
-from app.database import Base, engine
-from app.routes import auth, users
-from app.seed import seed_admin
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, users, admin
@@ -12,7 +9,7 @@ app = FastAPI(title="Dayflow HRMS")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Vite / React
+        "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
@@ -23,6 +20,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(admin.router)
+
 
 @app.on_event("startup")
 def on_startup():
