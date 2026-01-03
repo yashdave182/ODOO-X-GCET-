@@ -151,7 +151,12 @@ const EmployeeProfile: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate("/admin/dashboard");
+    // Navigate based on user role
+    if (user?.role === UserRole.EMPLOYEE) {
+      navigate("/employee/dashboard");
+    } else {
+      navigate("/admin/dashboard");
+    }
   };
 
   const handleEdit = () => {
@@ -172,7 +177,12 @@ const EmployeeProfile: React.FC = () => {
         // TODO: Call API to create new employee
         // await employeeService.createEmployee(editedEmployee);
         alert("New employee created successfully! (API integration pending)");
-        navigate("/admin/dashboard");
+        // Navigate based on user role
+        if (user?.role === UserRole.EMPLOYEE) {
+          navigate("/employee/dashboard");
+        } else {
+          navigate("/admin/dashboard");
+        }
       } else {
         // TODO: Call API to update employee
         // await employeeService.updateEmployee(id, editedEmployee);
