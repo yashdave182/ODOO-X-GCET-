@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Clock, CheckCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { attendanceService } from "../services/attendanceService";
+import attendanceService from "../services/attendanceService";
 import styles from "./CheckInOut.module.css";
 
 const CheckInOut: React.FC = () => {

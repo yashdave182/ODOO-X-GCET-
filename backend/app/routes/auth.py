@@ -1,3 +1,7 @@
+from app.core.dependencies import get_current_user
+from app.core.security import create_access_token, verify_password
+from app.database import get_db
+from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -5,7 +9,6 @@ from app.database import get_db
 from app.models.user import User
 from app.core.security import verify_password, create_access_token
 from app.core.dependencies import get_current_user
-from app.schemas.auth import LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -17,7 +20,7 @@ def login(
 ):
     user = (
         db.query(User)
-        .filter(User.employee_id == payload.login_id)
+        .filter(User.employee_id == employee_id)
         .first()
     )
 

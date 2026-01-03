@@ -4,6 +4,8 @@ import { UserRole } from "../types";
 import { SignIn } from "../pages/auth/SignIn";
 import { SignUp } from "../pages/auth/SignUp";
 import EmployeeDashboard from "../pages/EmployeeDashboard";
+import AdminDashboard from "../pages/AdminDashboard";
+import EmployeeProfile from "../pages/EmployeeProfile";
 
 const DashboardRedirect = () => {
   const { user } = useAuth();
@@ -20,43 +22,6 @@ const DashboardRedirect = () => {
   }
 
   return <Navigate to="/signin" replace />;
-};
-
-const TempAdminDashboard = () => {
-  const { logout, user } = useAuth();
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        gap: "1rem",
-      }}
-    >
-      <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>
-        Welcome, {user?.fullName}!
-      </h1>
-      <p style={{ color: "#6b7280" }}>Admin Dashboard coming soon...</p>
-      <button
-        onClick={logout}
-        style={{
-          padding: "0.75rem 1.5rem",
-          backgroundColor: "#7c3aed",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontSize: "1rem",
-          fontWeight: "500",
-        }}
-      >
-        Sign Out
-      </button>
-    </div>
-  );
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -145,7 +110,31 @@ export const AppRoutes = () => {
           path="/admin/dashboard"
           element={
             <ProtectedRoute>
-              <TempAdminDashboard />
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/employee/:id"
+          element={
+            <ProtectedRoute>
+              <EmployeeProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/employee/new"
+          element={
+            <ProtectedRoute>
+              <EmployeeProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/profile"
+          element={
+            <ProtectedRoute>
+              <EmployeeProfile />
             </ProtectedRoute>
           }
         />
