@@ -6,10 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User, UserRole
-from app.core.dependencies import get_current_admin
+from app.core.dependencies import get_current_admin, get_current_user
 from app.core.security import get_password_hash
 from app.core.utils import generate_login_id
 from app.schemas.admin import AdminCreateEmployee
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter(
     prefix="/admin",
@@ -59,3 +62,22 @@ def create_employee(
         "login_id": login_id,
         "temporary_password": temp_password,
     }
+
+@router.get("/users")
+def get_all_employees(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    users = db.query(User).all()
+
+    return [
+        {
+            "id": user.id,
+            "employee_id": user.employee_id,
+            "name": user.name,
+            "role": user.role.value,
+            "email": user.email,
+            "job_title": user.job_title,
+        }
+        for user in users
+    ]
