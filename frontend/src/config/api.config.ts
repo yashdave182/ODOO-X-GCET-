@@ -26,8 +26,9 @@ export const API_ENDPOINTS = {
     USERS: "/admin/users",
     USER_BY_ID: (id: number) => `/admin/users/${id}`,
     ATTENDANCE: "/admin/attendance",
-    LEAVE: "/admin/leave",
-    LEAVE_BY_ID: (id: number) => `/admin/leave/${id}`,
+    LEAVES: "/admin/leaves",
+    APPROVE_LEAVE: (id: number) => `/admin/leaves/${id}/approve`,
+    REJECT_LEAVE: (id: number) => `/admin/leaves/${id}/reject`,
   },
 
   // Attendance
@@ -39,8 +40,8 @@ export const API_ENDPOINTS = {
 
   // Leave Management
   LEAVE: {
-    APPLY: "/leave/apply",
-    ME: "/leave/me",
+    APPLY: "/leaves/apply",
+    ME: "/leaves/me",
   },
 
   // Payroll

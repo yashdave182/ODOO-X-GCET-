@@ -115,6 +115,37 @@ const EmployeeDashboard: React.FC = () => {
     }
   };
 
+  const calculateTotalWorkHours = () => {
+    let totalMinutes = 0;
+    let daysPresent = 0;
+
+    attendanceRecords.forEach((record) => {
+      if (
+        record.workHours &&
+        record.workHours !== "N/A" &&
+        record.workHours !== "0h 0m"
+      ) {
+        daysPresent++;
+        // Parse "8h 30m" format
+        const hoursMatch = record.workHours.match(/(\d+)h/);
+        const minutesMatch = record.workHours.match(/(\d+)m/);
+        const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+        const minutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
+        totalMinutes += hours * 60 + minutes;
+      }
+    });
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+
+    return {
+      formatted: `${totalHours}h ${remainingMinutes}m`,
+      daysPresent,
+      averageHours:
+        daysPresent > 0 ? (totalMinutes / daysPresent / 60).toFixed(1) : "0",
+    };
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -184,8 +215,33 @@ const EmployeeDashboard: React.FC = () => {
       );
     }
 
+    const workStats = calculateTotalWorkHours();
+
     return (
       <div className={styles.recordsContainer}>
+        {/* Work Hours Summary */}
+        <div className={styles.workSummary}>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryLabel}>Total Work Hours</div>
+            <div className={styles.summaryValue}>{workStats.formatted}</div>
+          </div>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryLabel}>Days Present</div>
+            <div className={styles.summaryValue}>{workStats.daysPresent}</div>
+          </div>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryLabel}>Average Hours/Day</div>
+            <div className={styles.summaryValue}>{workStats.averageHours}h</div>
+          </div>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryLabel}>Total Records</div>
+            <div className={styles.summaryValue}>
+              {attendanceRecords.length}
+            </div>
+          </div>
+        </div>
+
+        {/* Attendance Table */}
         <table className={styles.attendanceTable}>
           <thead>
             <tr>

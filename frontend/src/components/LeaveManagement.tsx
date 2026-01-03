@@ -8,24 +8,14 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  XCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import leaveService, {
+  LeaveRequest,
+  LeaveStatus,
+} from "../services/leaveService";
 import styles from "./LeaveManagement.module.css";
-
-interface LeaveRequest {
-  id: string;
-  employeeName: string;
-  employeeId: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  duration: number;
-  reason: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  appliedDate: string;
-  approvedBy?: string;
-  rejectionReason?: string;
-}
 
 interface LeaveBalance {
   paidTimeOff: number;
@@ -47,48 +37,50 @@ const LeaveManagement: React.FC = () => {
   );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [formData, setFormData] = useState({
-    leaveType: "Paid time off",
     startDate: "",
     endDate: "",
     reason: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isAdmin = user?.role === "ADMIN" || user?.role === "HR";
 
   useEffect(() => {
-    loadLeaveRequests();
-  }, []);
+    if (user) {
+      loadLeaveRequests();
+      if (!isAdmin) {
+        loadLeaveBalance();
+      }
+    }
+  }, [user, isAdmin]);
 
-  const loadLeaveRequests = () => {
-    // TODO: Replace with actual API call
-    const mockRequests: LeaveRequest[] = [
-      {
-        id: "1",
-        employeeName: isAdmin ? "John Doe" : user?.fullName || "",
-        employeeId: isAdmin ? "OI001" : user?.employeeId || "",
-        leaveType: "Paid time off",
-        startDate: "2025-05-15",
-        endDate: "2025-05-18",
-        duration: 4,
-        reason: "Family vacation",
-        status: "APPROVED",
-        appliedDate: "2025-05-01",
-        approvedBy: "Admin",
-      },
-      {
-        id: "2",
-        employeeName: isAdmin ? "Jane Smith" : user?.fullName || "",
-        employeeId: isAdmin ? "OI002" : user?.employeeId || "",
-        leaveType: "Sick leave",
-        startDate: "2025-06-10",
-        endDate: "2025-06-10",
-        duration: 1,
-        reason: "Medical appointment",
-        status: "PENDING",
-        appliedDate: "2025-06-05",
-      },
-    ];
-    setLeaveRequests(mockRequests);
+  const loadLeaveRequests = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      let requests: LeaveRequest[];
+      if (isAdmin) {
+        requests = await leaveService.getAllLeaveRequests();
+      } else {
+        requests = await leaveService.getMyLeaveRequests();
+      }
+      setLeaveRequests(requests);
+    } catch (error: any) {
+      console.error("Error loading leave requests:", error);
+      setError(error.message || "Failed to load leave requests");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadLeaveBalance = async () => {
+    try {
+      const balance = await leaveService.getLeaveBalance();
+      setLeaveBalance(balance);
+    } catch (error: any) {
+      console.error("Error loading leave balance:", error);
+    }
   };
 
   const handleRequestLeave = () => {
@@ -99,53 +91,81 @@ const LeaveManagement: React.FC = () => {
     setShowRequestModal(false);
     setSelectedRequest(null);
     setFormData({
-      leaveType: "Paid time off",
       startDate: "",
       endDate: "",
       reason: "",
     });
+    setError(null);
   };
 
-  const handleSubmitRequest = (e: React.FormEvent) => {
+  const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!formData.startDate || !formData.endDate) {
+      setError("Please select both start and end dates");
+      return;
+    }
 
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
-    const duration =
-      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    const newRequest: LeaveRequest = {
-      id: Date.now().toString(),
-      employeeName: user?.fullName || "",
-      employeeId: user?.employeeId || "",
-      leaveType: formData.leaveType,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      duration,
-      reason: formData.reason,
-      status: "PENDING",
-      appliedDate: new Date().toISOString().split("T")[0],
-    };
+    if (end < start) {
+      setError("End date cannot be before start date");
+      return;
+    }
 
-    setLeaveRequests([newRequest, ...leaveRequests]);
-    handleCloseModal();
+    setIsLoading(true);
+    try {
+      await leaveService.applyLeave({
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        reason: formData.reason,
+      });
+
+      // Reload leave requests and balance
+      await loadLeaveRequests();
+      if (!isAdmin) {
+        await loadLeaveBalance();
+      }
+
+      handleCloseModal();
+    } catch (error: any) {
+      console.error("Error submitting leave request:", error);
+      setError(error.message || "Failed to submit leave request");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleApproveReject = (
+  const handleApproveReject = async (
     requestId: string,
     action: "APPROVED" | "REJECTED",
   ) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) =>
-        req.id === requestId
-          ? {
-              ...req,
-              status: action,
-              approvedBy: action === "APPROVED" ? user?.fullName : undefined,
-            }
-          : req,
-      ),
-    );
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (action === "APPROVED") {
+        await leaveService.approveLeave(requestId);
+      } else {
+        await leaveService.rejectLeave(requestId);
+      }
+
+      // Reload leave requests
+      await loadLeaveRequests();
+
+      // Close detail modal if open
+      if (selectedRequest?.id === requestId) {
+        setSelectedRequest(null);
+      }
+    } catch (error: any) {
+      console.error(`Error ${action.toLowerCase()} leave:`, error);
+      setError(
+        error.message || `Failed to ${action.toLowerCase()} leave request`,
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleViewDetails = (request: LeaveRequest) => {
@@ -174,6 +194,10 @@ const LeaveManagement: React.FC = () => {
     }
   };
 
+  const calculateDuration = (startDate: string, endDate: string): number => {
+    return leaveService.calculateLeaveDays(startDate, endDate);
+  };
+
   const prevMonth = () => {
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
@@ -199,20 +223,23 @@ const LeaveManagement: React.FC = () => {
     const firstDay = getFirstDayOfMonth(currentDate);
     const days = [];
 
-    // Empty cells for days before the first day of the month
+    // Empty cells for days before the first day of month
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className={styles.calendarDayEmpty} />);
+      days.push(
+        <div key={`empty-${i}`} className={styles.calendarDayEmpty}></div>,
+      );
     }
 
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const hasLeave = leaveRequests.some(
-        (req) =>
-          req.status === "APPROVED" &&
-          dateStr >= req.startDate &&
-          dateStr <= req.endDate,
-      );
+      const hasLeave = leaveRequests.some((req) => {
+        if (req.status !== LeaveStatus.APPROVED) return false;
+        const start = new Date(req.startDate);
+        const end = new Date(req.endDate);
+        const current = new Date(dateStr);
+        return current >= start && current <= end;
+      });
 
       days.push(
         <div
@@ -227,178 +254,308 @@ const LeaveManagement: React.FC = () => {
     return days;
   };
 
-  return (
-    <div className={styles.container}>
-      {isAdmin ? (
-        // Admin/HR View
-        <div className={styles.adminView}>
-          <div className={styles.tableContainer}>
-            <table className={styles.leaveTable}>
-              <thead>
-                <tr>
-                  <th>NEW</th>
-                  <th>Paid time off</th>
-                  <th>Sick time off</th>
-                  <th>25 Days Availble</th>
-                  <th>55 Days Availble</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Time off Type</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaveRequests.map((request) => (
-                  <tr key={request.id}>
-                    <td>
-                      <input type="checkbox" />
-                    </td>
-                    <td className={styles.employeeName}>
-                      {request.employeeName}
-                    </td>
-                    <td>{formatDate(request.appliedDate)}</td>
-                    <td>{request.duration} Days Availble</td>
-                    <td>55 Days Availble</td>
-                    <td>{formatDate(request.startDate)}</td>
-                    <td>{formatDate(request.endDate)}</td>
-                    <td>{request.leaveType}</td>
-                    <td>
-                      <div className={styles.statusActions}>
-                        {request.status === "PENDING" ? (
-                          <>
-                            <button
-                              className={styles.approveBtn}
-                              onClick={() =>
-                                handleApproveReject(request.id, "APPROVED")
-                              }
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              className={styles.rejectBtn}
-                              onClick={() =>
-                                handleApproveReject(request.id, "REJECTED")
-                              }
-                            >
-                              <X size={16} />
-                            </button>
-                          </>
-                        ) : (
-                          <span
-                            className={`${styles.statusBadge} ${getStatusColor(request.status)}`}
-                          >
-                            {request.status}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+  // Employee View
+  const renderEmployeeView = () => {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h2 className={styles.title}>Time Off & Leave Management</h2>
+          <button
+            className={styles.requestButton}
+            onClick={handleRequestLeave}
+            disabled={isLoading}
+          >
+            <Plus size={20} />
+            Request Leave
+          </button>
+        </div>
 
-          <div className={styles.adminNote}>
-            <div className={styles.noteHeader}>
-              <AlertCircle size={20} />
-              <span>Note</span>
+        {error && (
+          <div className={styles.errorBanner}>
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Leave Balance */}
+        <div className={styles.balanceSection}>
+          <h3 className={styles.sectionTitle}>Leave Balance</h3>
+          <div className={styles.balanceCards}>
+            <div className={styles.balanceCard}>
+              <div className={styles.balanceLabel}>Paid Time Off</div>
+              <div className={styles.balanceValue}>
+                {leaveBalance.paidTimeOff}
+              </div>
+              <div className={styles.balanceSubtext}>days remaining</div>
             </div>
-            <p>
-              Employees can view only their own time off records, while Admins
-              and HR Officers can view all time off records & approve/reject
-              them for all employees
-            </p>
+            <div className={styles.balanceCard}>
+              <div className={styles.balanceLabel}>Sick Leave</div>
+              <div className={styles.balanceValue}>
+                {leaveBalance.sickLeave}
+              </div>
+              <div className={styles.balanceSubtext}>days remaining</div>
+            </div>
+            <div className={styles.balanceCard}>
+              <div className={styles.balanceLabel}>Unpaid Leave</div>
+              <div className={styles.balanceValue}>
+                {leaveBalance.unpaidLeave === 0
+                  ? "∞"
+                  : leaveBalance.unpaidLeave}
+              </div>
+              <div className={styles.balanceSubtext}>
+                {leaveBalance.unpaidLeave === 0
+                  ? "unlimited"
+                  : "days remaining"}
+              </div>
+            </div>
           </div>
         </div>
-      ) : (
-        // Employee View
-        <div className={styles.employeeView}>
-          <div className={styles.leaveBalanceSection}>
-            <div className={styles.balanceCard}>
-              <h3>Leave Balance</h3>
-              <div className={styles.balanceItems}>
-                <div className={styles.balanceItem}>
-                  <span className={styles.balanceLabel}>Paid Time Off</span>
-                  <span className={styles.balanceValue}>
-                    {leaveBalance.paidTimeOff} days
-                  </span>
-                </div>
-                <div className={styles.balanceItem}>
-                  <span className={styles.balanceLabel}>Sick Leave</span>
-                  <span className={styles.balanceValue}>
-                    {leaveBalance.sickLeave} days
-                  </span>
-                </div>
-                <div className={styles.balanceItem}>
-                  <span className={styles.balanceLabel}>Unpaid Leave</span>
-                  <span className={styles.balanceValue}>
-                    {leaveBalance.unpaidLeave} days
-                  </span>
-                </div>
-              </div>
-              <button
-                className={styles.requestButton}
-                onClick={handleRequestLeave}
-              >
-                <Plus size={18} />
-                Request Time Off
+
+        {/* Calendar View */}
+        <div className={styles.calendarSection}>
+          <div className={styles.calendarHeader}>
+            <h3 className={styles.sectionTitle}>Leave Calendar</h3>
+            <div className={styles.calendarControls}>
+              <button className={styles.calendarButton} onClick={prevMonth}>
+                <ChevronLeft size={20} />
+              </button>
+              <span className={styles.calendarMonth}>
+                {currentDate.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+              <button className={styles.calendarButton} onClick={nextMonth}>
+                <ChevronRight size={20} />
               </button>
             </div>
+          </div>
+          <div className={styles.calendar}>
+            <div className={styles.calendarWeekdays}>
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                <div key={day} className={styles.calendarWeekday}>
+                  {day}
+                </div>
+              ))}
+            </div>
+            <div className={styles.calendarDays}>{renderCalendar()}</div>
+          </div>
+        </div>
 
-            <div className={styles.calendarCard}>
-              <div className={styles.calendarHeader}>
-                <button onClick={prevMonth} className={styles.calendarNav}>
-                  <ChevronLeft size={20} />
-                </button>
-                <h3>
-                  {currentDate.toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </h3>
-                <button onClick={nextMonth} className={styles.calendarNav}>
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-              <div className={styles.calendarGrid}>
-                <div className={styles.calendarWeekday}>Sun</div>
-                <div className={styles.calendarWeekday}>Mon</div>
-                <div className={styles.calendarWeekday}>Tue</div>
-                <div className={styles.calendarWeekday}>Wed</div>
-                <div className={styles.calendarWeekday}>Thu</div>
-                <div className={styles.calendarWeekday}>Fri</div>
-                <div className={styles.calendarWeekday}>Sat</div>
-                {renderCalendar()}
-              </div>
+        {/* My Leave Requests */}
+        <div className={styles.requestsSection}>
+          <h3 className={styles.sectionTitle}>My Leave Requests</h3>
+          {isLoading && leaveRequests.length === 0 ? (
+            <div className={styles.loadingState}>Loading...</div>
+          ) : leaveRequests.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Calendar size={48} />
+              <p>No leave requests yet</p>
+              <button
+                className={styles.requestButtonSecondary}
+                onClick={handleRequestLeave}
+              >
+                Request Your First Leave
+              </button>
+            </div>
+          ) : (
+            <div className={styles.requestsList}>
+              {leaveRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className={styles.requestCard}
+                  onClick={() => handleViewDetails(request)}
+                >
+                  <div className={styles.requestHeader}>
+                    <div className={styles.requestDates}>
+                      <span className={styles.requestDate}>
+                        {formatDate(request.startDate)}
+                      </span>
+                      <span className={styles.requestDateSeparator}>→</span>
+                      <span className={styles.requestDate}>
+                        {formatDate(request.endDate)}
+                      </span>
+                    </div>
+                    <span
+                      className={`${styles.statusBadge} ${getStatusColor(request.status)}`}
+                    >
+                      {request.status}
+                    </span>
+                  </div>
+                  <div className={styles.requestBody}>
+                    <div className={styles.requestDuration}>
+                      <Clock size={16} />
+                      <span>
+                        {calculateDuration(request.startDate, request.endDate)}{" "}
+                        day
+                        {calculateDuration(
+                          request.startDate,
+                          request.endDate,
+                        ) !== 1
+                          ? "s"
+                          : ""}
+                      </span>
+                    </div>
+                    {request.reason && (
+                      <p className={styles.requestReason}>{request.reason}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Admin View
+  const renderAdminView = () => {
+    const pendingRequests = leaveRequests.filter(
+      (req) => req.status === LeaveStatus.PENDING,
+    );
+    const processedRequests = leaveRequests.filter(
+      (req) => req.status !== LeaveStatus.PENDING,
+    );
+
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h2 className={styles.title}>Leave Management - Admin</h2>
+          <div className={styles.statsContainer}>
+            <div className={styles.statBadge}>
+              <Clock size={18} />
+              <span>
+                {pendingRequests.length} Pending Request
+                {pendingRequests.length !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
+        </div>
 
-          <div className={styles.requestsList}>
-            <h3>My Time Off Requests</h3>
-            <div className={styles.tableContainer}>
-              <table className={styles.leaveTable}>
+        {error && (
+          <div className={styles.errorBanner}>
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Pending Requests */}
+        <div className={styles.requestsSection}>
+          <h3 className={styles.sectionTitle}>Pending Approval</h3>
+          {isLoading && leaveRequests.length === 0 ? (
+            <div className={styles.loadingState}>Loading...</div>
+          ) : pendingRequests.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Check size={48} />
+              <p>No pending leave requests</p>
+            </div>
+          ) : (
+            <div className={styles.adminRequestsTable}>
+              <table>
                 <thead>
                   <tr>
-                    <th>Name</th>
+                    <th>Employee</th>
+                    <th>Employee ID</th>
                     <th>Start Date</th>
                     <th>End Date</th>
-                    <th>Time off Type</th>
-                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Reason</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaveRequests.map((request) => (
-                    <tr
-                      key={request.id}
-                      onClick={() => handleViewDetails(request)}
-                      className={styles.clickableRow}
-                    >
+                  {pendingRequests.map((request) => (
+                    <tr key={request.id}>
                       <td className={styles.employeeName}>
-                        {request.employeeName}
+                        {request.employeeName || "N/A"}
                       </td>
+                      <td>{request.employeeId || "N/A"}</td>
                       <td>{formatDate(request.startDate)}</td>
                       <td>{formatDate(request.endDate)}</td>
-                      <td>{request.leaveType}</td>
+                      <td>
+                        {calculateDuration(request.startDate, request.endDate)}{" "}
+                        day
+                        {calculateDuration(
+                          request.startDate,
+                          request.endDate,
+                        ) !== 1
+                          ? "s"
+                          : ""}
+                      </td>
+                      <td className={styles.reasonCell}>
+                        {request.reason || "N/A"}
+                      </td>
+                      <td>
+                        <div className={styles.actionButtons}>
+                          <button
+                            className={styles.approveButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApproveReject(request.id, "APPROVED");
+                            }}
+                            disabled={isLoading}
+                            title="Approve"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            className={styles.rejectButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApproveReject(request.id, "REJECTED");
+                            }}
+                            disabled={isLoading}
+                            title="Reject"
+                          >
+                            <XCircle size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Processed Requests */}
+        {processedRequests.length > 0 && (
+          <div className={styles.requestsSection}>
+            <h3 className={styles.sectionTitle}>Processed Requests</h3>
+            <div className={styles.adminRequestsTable}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Employee ID</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processedRequests.map((request) => (
+                    <tr key={request.id}>
+                      <td className={styles.employeeName}>
+                        {request.employeeName || "N/A"}
+                      </td>
+                      <td>{request.employeeId || "N/A"}</td>
+                      <td>{formatDate(request.startDate)}</td>
+                      <td>{formatDate(request.endDate)}</td>
+                      <td>
+                        {calculateDuration(request.startDate, request.endDate)}{" "}
+                        day
+                        {calculateDuration(
+                          request.startDate,
+                          request.endDate,
+                        ) !== 1
+                          ? "s"
+                          : ""}
+                      </td>
                       <td>
                         <span
                           className={`${styles.statusBadge} ${getStatusColor(request.status)}`}
@@ -406,184 +563,241 @@ const LeaveManagement: React.FC = () => {
                           {request.status}
                         </span>
                       </td>
+                      <td className={styles.reasonCell}>
+                        {request.reason || "N/A"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    );
+  };
 
-      {/* Request Leave Modal */}
-      {showRequestModal && (
-        <div className={styles.modalOverlay} onClick={handleCloseModal}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>Time off Type Request</h3>
-              <button className={styles.closeButton} onClick={handleCloseModal}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmitRequest} className={styles.modalBody}>
-              <div className={styles.formGroup}>
-                <label>Employee</label>
-                <input
-                  type="text"
-                  value={user?.fullName || ""}
-                  disabled
-                  className={styles.formInput}
-                />
-              </div>
+  // Request Leave Modal
+  const renderRequestModal = () => {
+    if (!showRequestModal) return null;
 
-              <div className={styles.formGroup}>
-                <label>Time off Type</label>
-                <select
-                  value={formData.leaveType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, leaveType: e.target.value })
-                  }
-                  className={styles.formInput}
-                  required
-                >
-                  <option value="Paid time off">Paid time off</option>
-                  <option value="Sick leave">Sick leave</option>
-                  <option value="Unpaid leave">Unpaid leave</option>
-                </select>
-              </div>
+    const duration =
+      formData.startDate && formData.endDate
+        ? calculateDuration(formData.startDate, formData.endDate)
+        : 0;
 
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Validity Period (May 18 - May 18)</label>
-                  <div className={styles.dateInputs}>
-                    <input
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, startDate: e.target.value })
-                      }
-                      className={styles.formInput}
-                      required
-                    />
-                    <span>To</span>
-                    <input
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, endDate: e.target.value })
-                      }
-                      className={styles.formInput}
-                      required
-                    />
-                  </div>
+    return (
+      <div className={styles.modalOverlay} onClick={handleCloseModal}>
+        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3>Request Leave</h3>
+            <button className={styles.modalClose} onClick={handleCloseModal}>
+              <X size={24} />
+            </button>
+          </div>
+          <form onSubmit={handleSubmitRequest}>
+            <div className={styles.modalBody}>
+              {error && (
+                <div className={styles.errorMessage}>
+                  <AlertCircle size={18} />
+                  <span>{error}</span>
                 </div>
-              </div>
+              )}
 
               <div className={styles.formGroup}>
-                <label>Duration</label>
+                <label htmlFor="startDate">Start Date</label>
                 <input
-                  type="text"
-                  value={
-                    formData.startDate && formData.endDate
-                      ? `${Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} Days`
-                      : "0 Days"
+                  type="date"
+                  id="startDate"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
                   }
-                  disabled
-                  className={styles.formInput}
+                  min={new Date().toISOString().split("T")[0]}
+                  required
                 />
               </div>
 
               <div className={styles.formGroup}>
-                <label>Attachment</label>
-                <div className={styles.fileUpload}>
-                  <input type="file" className={styles.fileInput} />
-                  <span className={styles.fileLabel}>
-                    Choose file or drag here (Optional)
+                <label htmlFor="endDate">End Date</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  value={formData.endDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
+                  min={
+                    formData.startDate || new Date().toISOString().split("T")[0]
+                  }
+                  required
+                />
+              </div>
+
+              {duration > 0 && (
+                <div className={styles.durationInfo}>
+                  <Clock size={16} />
+                  <span>
+                    Duration: {duration} day{duration !== 1 ? "s" : ""}
                   </span>
                 </div>
-              </div>
+              )}
 
-              <div className={styles.modalFooter}>
-                <button
-                  type="button"
-                  className={styles.cancelButton}
-                  onClick={handleCloseModal}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className={styles.submitButton}>
-                  Submit
-                </button>
+              <div className={styles.formGroup}>
+                <label htmlFor="reason">Reason (Optional)</label>
+                <textarea
+                  id="reason"
+                  value={formData.reason}
+                  onChange={(e) =>
+                    setFormData({ ...formData, reason: e.target.value })
+                  }
+                  rows={4}
+                  placeholder="Enter reason for leave..."
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* View Request Details Modal */}
-      {selectedRequest && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setSelectedRequest(null)}
-        >
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>Time Off Request Details</h3>
+            </div>
+            <div className={styles.modalFooter}>
               <button
-                className={styles.closeButton}
-                onClick={() => setSelectedRequest(null)}
+                type="button"
+                className={styles.cancelButton}
+                onClick={handleCloseModal}
+                disabled={isLoading}
               >
-                <X size={20} />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={styles.submitButton}
+                disabled={isLoading}
+              >
+                {isLoading ? "Submitting..." : "Submit Request"}
               </button>
             </div>
-            <div className={styles.modalBody}>
-              <div className={styles.detailsGrid}>
-                <div className={styles.detailItem}>
-                  <label>Employee</label>
-                  <p>{selectedRequest.employeeName}</p>
-                </div>
-                <div className={styles.detailItem}>
-                  <label>Time off Type</label>
-                  <p>{selectedRequest.leaveType}</p>
-                </div>
-                <div className={styles.detailItem}>
-                  <label>Start Date</label>
-                  <p>{formatDate(selectedRequest.startDate)}</p>
-                </div>
-                <div className={styles.detailItem}>
-                  <label>End Date</label>
-                  <p>{formatDate(selectedRequest.endDate)}</p>
-                </div>
-                <div className={styles.detailItem}>
-                  <label>Duration</label>
-                  <p>{selectedRequest.duration} Days</p>
-                </div>
-                <div className={styles.detailItem}>
-                  <label>Status</label>
-                  <p>
-                    <span
-                      className={`${styles.statusBadge} ${getStatusColor(selectedRequest.status)}`}
-                    >
-                      {selectedRequest.status}
-                    </span>
-                  </p>
-                </div>
-                <div className={styles.detailItem}>
-                  <label>Reason</label>
-                  <p>{selectedRequest.reason}</p>
-                </div>
-                {selectedRequest.approvedBy && (
-                  <div className={styles.detailItem}>
-                    <label>Approved By</label>
-                    <p>{selectedRequest.approvedBy}</p>
-                  </div>
-                )}
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // Detail Modal
+  const renderDetailModal = () => {
+    if (!selectedRequest) return null;
+
+    return (
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setSelectedRequest(null)}
+      >
+        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3>Leave Request Details</h3>
+            <button
+              className={styles.modalClose}
+              onClick={() => setSelectedRequest(null)}
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className={styles.modalBody}>
+            <div className={styles.detailSection}>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>Status:</span>
+                <span
+                  className={`${styles.statusBadge} ${getStatusColor(selectedRequest.status)}`}
+                >
+                  {selectedRequest.status}
+                </span>
               </div>
+              {isAdmin && selectedRequest.employeeName && (
+                <>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Employee:</span>
+                    <span className={styles.detailValue}>
+                      {selectedRequest.employeeName}
+                    </span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Employee ID:</span>
+                    <span className={styles.detailValue}>
+                      {selectedRequest.employeeId}
+                    </span>
+                  </div>
+                </>
+              )}
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>Start Date:</span>
+                <span className={styles.detailValue}>
+                  {formatDate(selectedRequest.startDate)}
+                </span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>End Date:</span>
+                <span className={styles.detailValue}>
+                  {formatDate(selectedRequest.endDate)}
+                </span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>Duration:</span>
+                <span className={styles.detailValue}>
+                  {calculateDuration(
+                    selectedRequest.startDate,
+                    selectedRequest.endDate,
+                  )}{" "}
+                  day
+                  {calculateDuration(
+                    selectedRequest.startDate,
+                    selectedRequest.endDate,
+                  ) !== 1
+                    ? "s"
+                    : ""}
+                </span>
+              </div>
+              {selectedRequest.reason && (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Reason:</span>
+                  <span className={styles.detailValue}>
+                    {selectedRequest.reason}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {isAdmin && selectedRequest.status === LeaveStatus.PENDING && (
+              <div className={styles.adminActions}>
+                <button
+                  className={styles.approveButtonLarge}
+                  onClick={() => {
+                    handleApproveReject(selectedRequest.id, "APPROVED");
+                  }}
+                  disabled={isLoading}
+                >
+                  <Check size={20} />
+                  Approve Leave
+                </button>
+                <button
+                  className={styles.rejectButtonLarge}
+                  onClick={() => {
+                    handleApproveReject(selectedRequest.id, "REJECTED");
+                  }}
+                  disabled={isLoading}
+                >
+                  <XCircle size={20} />
+                  Reject Leave
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {isAdmin ? renderAdminView() : renderEmployeeView()}
+      {renderRequestModal()}
+      {renderDetailModal()}
+    </>
   );
 };
 

@@ -7,61 +7,43 @@
 import apiClient from "../lib/apiClient";
 import { API_ENDPOINTS } from "../config/api.config";
 
-export enum LeaveType {
-  SICK = "SICK",
-  CASUAL = "CASUAL",
-  ANNUAL = "ANNUAL",
-  UNPAID = "UNPAID",
-  MATERNITY = "MATERNITY",
-  PATERNITY = "PATERNITY",
-}
-
 export enum LeaveStatus {
   PENDING = "PENDING",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",
-  CANCELLED = "CANCELLED",
 }
 
 export interface LeaveRequest {
   id: string;
   employeeId: string;
-  employeeName: string;
-  leaveType: LeaveType;
+  employeeName?: string;
   startDate: string;
   endDate: string;
-  numberOfDays: number;
   reason: string;
   status: LeaveStatus;
-  appliedOn: string;
-  reviewedBy?: string;
-  reviewedOn?: string;
-  reviewComments?: string;
 }
 
 export interface ApplyLeaveData {
-  leaveType: LeaveType;
   startDate: string;
   endDate: string;
   reason: string;
 }
 
 /**
- * POST /leave/apply
+ * POST /leaves/apply
  * Apply for leave (Employee)
  */
 export const applyLeave = async (
-  data: ApplyLeaveData
-): Promise<LeaveRequest> => {
+  data: ApplyLeaveData,
+): Promise<{ message: string; status: string }> => {
   try {
     const response = await apiClient.post(API_ENDPOINTS.LEAVE.APPLY, {
-      leave_type: data.leaveType,
       start_date: data.startDate,
       end_date: data.endDate,
       reason: data.reason,
     });
 
-    return mapBackendLeaveToFrontend(response.data);
+    return response.data;
   } catch (error: any) {
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
@@ -71,19 +53,21 @@ export const applyLeave = async (
 };
 
 /**
- * GET /leave/me
+ * GET /leaves/me
  * Get own leave requests (Employee)
  */
-export const getMyLeaveRequests = async (
-  status?: LeaveStatus
-): Promise<LeaveRequest[]> => {
+export const getMyLeaveRequests = async (): Promise<LeaveRequest[]> => {
   try {
-    const params: any = {};
-    if (status) params.status = status;
+    const response = await apiClient.get(API_ENDPOINTS.LEAVE.ME);
 
-    const response = await apiClient.get(API_ENDPOINTS.LEAVE.ME, { params });
-
-    return response.data.map((leave: any) => mapBackendLeaveToFrontend(leave));
+    return response.data.map((leave: any) => ({
+      id: leave.id?.toString() || "",
+      employeeId: "",
+      startDate: leave.start_date,
+      endDate: leave.end_date,
+      reason: leave.reason || "",
+      status: leave.status as LeaveStatus,
+    }));
   } catch (error: any) {
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
@@ -93,21 +77,22 @@ export const getMyLeaveRequests = async (
 };
 
 /**
- * GET /admin/leave
+ * GET /admin/leaves
  * Get all leave requests (Admin only)
  */
-export const getAllLeaveRequests = async (
-  status?: LeaveStatus,
-  employeeId?: string
-): Promise<LeaveRequest[]> => {
+export const getAllLeaveRequests = async (): Promise<LeaveRequest[]> => {
   try {
-    const params: any = {};
-    if (status) params.status = status;
-    if (employeeId) params.employee_id = employeeId;
+    const response = await apiClient.get(API_ENDPOINTS.ADMIN.LEAVES);
 
-    const response = await apiClient.get(API_ENDPOINTS.ADMIN.LEAVE, { params });
-
-    return response.data.map((leave: any) => mapBackendLeaveToFrontend(leave));
+    return response.data.map((leave: any) => ({
+      id: leave.id?.toString() || "",
+      employeeId: leave.employee_id || "",
+      employeeName: leave.name || "",
+      startDate: leave.start_date,
+      endDate: leave.end_date,
+      reason: leave.reason || "",
+      status: leave.status as LeaveStatus,
+    }));
   } catch (error: any) {
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
@@ -117,127 +102,100 @@ export const getAllLeaveRequests = async (
 };
 
 /**
- * PUT /admin/leave/:id
- * Approve or reject leave request (Admin only)
- */
-export const updateLeaveStatus = async (
-  leaveId: string,
-  status: LeaveStatus.APPROVED | LeaveStatus.REJECTED,
-  comments?: string
-): Promise<LeaveRequest> => {
-  try {
-    const response = await apiClient.put(
-      API_ENDPOINTS.ADMIN.LEAVE_BY_ID(parseInt(leaveId)),
-      {
-        status: status,
-        review_comments: comments,
-      }
-    );
-
-    return mapBackendLeaveToFrontend(response.data);
-  } catch (error: any) {
-    if (error.response?.data?.detail) {
-      throw new Error(error.response.data.detail);
-    }
-    throw new Error(`Failed to ${status.toLowerCase()} leave request`);
-  }
-};
-
-/**
+ * PUT /admin/leaves/:id/approve
  * Approve leave request (Admin only)
  */
 export const approveLeave = async (
   leaveId: string,
-  comments?: string
-): Promise<LeaveRequest> => {
-  return updateLeaveStatus(leaveId, LeaveStatus.APPROVED, comments);
-};
-
-/**
- * Reject leave request (Admin only)
- */
-export const rejectLeave = async (
-  leaveId: string,
-  comments?: string
-): Promise<LeaveRequest> => {
-  return updateLeaveStatus(leaveId, LeaveStatus.REJECTED, comments);
-};
-
-/**
- * Get leave balance for employee
- * Note: Backend API spec doesn't include this endpoint yet
- */
-export const getLeaveBalance = async (): Promise<{
-  sick: number;
-  casual: number;
-  annual: number;
-  unpaid: number;
-}> => {
+): Promise<{ message: string }> => {
   try {
-    // TODO: Update when backend implements GET /leave/balance endpoint
-    // For now, return mock data or calculate from leave history
-    const leaveRequests = await getMyLeaveRequests(LeaveStatus.APPROVED);
-
-    const currentYear = new Date().getFullYear();
-    const thisYearLeaves = leaveRequests.filter(
-      (leave) => new Date(leave.startDate).getFullYear() === currentYear
+    const response = await apiClient.put(
+      API_ENDPOINTS.ADMIN.APPROVE_LEAVE(parseInt(leaveId)),
     );
-
-    const used = {
-      sick: 0,
-      casual: 0,
-      annual: 0,
-      unpaid: 0,
-    };
-
-    thisYearLeaves.forEach((leave) => {
-      switch (leave.leaveType) {
-        case LeaveType.SICK:
-          used.sick += leave.numberOfDays;
-          break;
-        case LeaveType.CASUAL:
-          used.casual += leave.numberOfDays;
-          break;
-        case LeaveType.ANNUAL:
-          used.annual += leave.numberOfDays;
-          break;
-        case LeaveType.UNPAID:
-          used.unpaid += leave.numberOfDays;
-          break;
-      }
-    });
-
-    // Standard leave allocation per year
-    const total = {
-      sick: 12,
-      casual: 12,
-      annual: 21,
-      unpaid: 0, // Unlimited
-    };
-
-    return {
-      sick: total.sick - used.sick,
-      casual: total.casual - used.casual,
-      annual: total.annual - used.annual,
-      unpaid: 0, // Unpaid is unlimited
-    };
+    return response.data;
   } catch (error: any) {
-    throw new Error("Failed to fetch leave balance");
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to approve leave request");
   }
 };
 
 /**
- * Calculate number of days between two dates
+ * PUT /admin/leaves/:id/reject
+ * Reject leave request (Admin only)
+ */
+export const rejectLeave = async (
+  leaveId: string,
+): Promise<{ message: string }> => {
+  try {
+    const response = await apiClient.put(
+      API_ENDPOINTS.ADMIN.REJECT_LEAVE(parseInt(leaveId)),
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Failed to reject leave request");
+  }
+};
+
+/**
+ * Calculate number of days between two dates (inclusive)
  */
 export const calculateLeaveDays = (
   startDate: string,
-  endDate: string
+  endDate: string,
 ): number => {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffTime = end.getTime() - start.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays + 1; // Include both start and end date
+};
+
+/**
+ * Get leave balance (mock implementation - backend doesn't provide this yet)
+ */
+export const getLeaveBalance = async (): Promise<{
+  paidTimeOff: number;
+  sickLeave: number;
+  unpaidLeave: number;
+}> => {
+  try {
+    // Calculate from existing leave requests
+    const leaveRequests = await getMyLeaveRequests();
+
+    const currentYear = new Date().getFullYear();
+    const thisYearLeaves = leaveRequests.filter(
+      (leave) =>
+        new Date(leave.startDate).getFullYear() === currentYear &&
+        leave.status === LeaveStatus.APPROVED,
+    );
+
+    let usedDays = 0;
+    thisYearLeaves.forEach((leave) => {
+      usedDays += calculateLeaveDays(leave.startDate, leave.endDate);
+    });
+
+    // Standard leave allocation per year
+    const totalPaidLeave = 20;
+    const totalSickLeave = 12;
+
+    return {
+      paidTimeOff: Math.max(0, totalPaidLeave - usedDays),
+      sickLeave: totalSickLeave,
+      unpaidLeave: 0,
+    };
+  } catch (error: any) {
+    // Return default values if fetch fails
+    return {
+      paidTimeOff: 20,
+      sickLeave: 12,
+      unpaidLeave: 0,
+    };
+  }
 };
 
 /**
@@ -245,41 +203,19 @@ export const calculateLeaveDays = (
  */
 export const getPendingLeaveCount = async (): Promise<number> => {
   try {
-    const leaves = await getAllLeaveRequests(LeaveStatus.PENDING);
-    return leaves.length;
+    const leaves = await getAllLeaveRequests();
+    return leaves.filter((leave) => leave.status === LeaveStatus.PENDING)
+      .length;
   } catch (error) {
     return 0;
   }
 };
-
-/**
- * Helper function to map backend leave data to frontend LeaveRequest type
- */
-function mapBackendLeaveToFrontend(data: any): LeaveRequest {
-  return {
-    id: data.id?.toString() || "",
-    employeeId: data.employee_id?.toString() || data.login_id || "",
-    employeeName: data.employee_name || "Unknown",
-    leaveType: data.leave_type || LeaveType.CASUAL,
-    startDate: data.start_date,
-    endDate: data.end_date,
-    numberOfDays:
-      data.number_of_days || calculateLeaveDays(data.start_date, data.end_date),
-    reason: data.reason || "",
-    status: data.status || LeaveStatus.PENDING,
-    appliedOn: data.applied_on || new Date().toISOString(),
-    reviewedBy: data.reviewed_by || undefined,
-    reviewedOn: data.reviewed_on || undefined,
-    reviewComments: data.review_comments || undefined,
-  };
-}
 
 // Export as default object
 const leaveService = {
   applyLeave,
   getMyLeaveRequests,
   getAllLeaveRequests,
-  updateLeaveStatus,
   approveLeave,
   rejectLeave,
   getLeaveBalance,

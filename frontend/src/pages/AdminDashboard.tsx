@@ -15,6 +15,8 @@ import { useAuth } from "../context/AuthContext";
 import { Employee, CreateEmployeeData, CreateEmployeeResponse } from "../types";
 import * as employeeService from "../services/employeeService";
 import UserProfileMenu from "../components/UserProfileMenu";
+import LeaveManagement from "../components/LeaveManagement";
+import AdminAttendance from "../components/AdminAttendance";
 import styles from "./AdminDashboard.module.css";
 
 type TabType = "employees" | "attendance" | "timeOff" | "payroll";
@@ -290,25 +292,11 @@ const AdminDashboard: React.FC = () => {
   };
 
   const renderAttendanceTab = () => {
-    return (
-      <div className={styles.tabContent}>
-        <h2>Attendance Management</h2>
-        <p className={styles.comingSoon}>
-          Attendance tracking and reports will be displayed here.
-        </p>
-      </div>
-    );
+    return <AdminAttendance />;
   };
 
   const renderTimeOffTab = () => {
-    return (
-      <div className={styles.tabContent}>
-        <h2>Time Off Management</h2>
-        <p className={styles.comingSoon}>
-          Leave requests and approvals will be displayed here.
-        </p>
-      </div>
-    );
+    return <LeaveManagement />;
   };
 
   const renderPayrollTab = () => {

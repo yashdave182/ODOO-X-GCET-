@@ -175,18 +175,19 @@ export const getTodayAttendanceSummary = async (): Promise<{
  * Calculate work hours between check-in and check-out
  */
 export const calculateWorkHours = (
-  checkIn: string,
-  checkOut?: string,
+  checkIn: string | undefined,
+  checkOut?: string | null,
 ): string => {
-  if (!checkOut) return "0h 0m";
+  if (!checkIn || !checkOut) return "0h 0m";
 
   const checkInTime = new Date(checkIn);
   const checkOutTime = new Date(checkOut);
-  const workHours =
-    (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+  const diffMs = checkOutTime.getTime() - checkInTime.getTime();
 
-  const hours = Math.floor(workHours);
-  const minutes = Math.floor((workHours - hours) * 60);
+  // Calculate total minutes
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
 
   return `${hours}h ${minutes}m`;
 };
@@ -222,6 +223,9 @@ function mapBackendAttendanceToFrontend(data: any): Attendance {
     }
   }
 
+  // Always calculate work hours from check_in and check_out times
+  const workHours = calculateWorkHours(data.check_in, data.check_out);
+
   return {
     id: data.id?.toString() || `ATT${Date.now()}`,
     employeeId: data.employee_id?.toString() || data.login_id || "",
@@ -229,8 +233,7 @@ function mapBackendAttendanceToFrontend(data: any): Attendance {
     checkIn: data.check_in || undefined,
     checkOut: data.check_out || undefined,
     status: status,
-    workHours:
-      data.work_hours || calculateWorkHours(data.check_in, data.check_out),
+    workHours: workHours,
     note: data.notes || data.note || undefined,
   };
 }

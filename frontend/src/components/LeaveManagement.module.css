@@ -1,33 +1,362 @@
+/* Container */
 .container {
     width: 100%;
+    padding: 0;
 }
 
-/* Admin View */
-.adminView {
+/* Header */
+.header {
     display: flex;
-    flex-direction: column;
-    gap: 24px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
 }
 
-.tableContainer {
+.title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.requestButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.requestButton:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
+}
+
+.requestButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.requestButtonSecondary {
+    padding: 10px 20px;
+    background: transparent;
+    color: #3b82f6;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.requestButtonSecondary:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* Stats Container (Admin) */
+.statsContainer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.statBadge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+    color: #fef3c7;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Error Banner */
+.errorBanner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+    color: #fee2e2;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+.errorMessage {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+/* Section Title */
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0 0 20px 0;
+}
+
+/* Leave Balance Section */
+.balanceSection {
+    margin-bottom: 32px;
+}
+
+.balanceCards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.balanceCard {
+    background: linear-gradient(135deg, #1f2228 0%, #25282f 100%);
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.balanceCard:hover {
+    border-color: #3b82f6;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+}
+
+.balanceLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.balanceValue {
+    font-size: 40px;
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 8px;
+    font-family: "Courier New", monospace;
+}
+
+.balanceSubtext {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* Calendar Section */
+.calendarSection {
+    margin-bottom: 32px;
+}
+
+.calendarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.calendarControls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.calendarMonth {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    min-width: 160px;
+    text-align: center;
+}
+
+.calendarButton {
+    padding: 8px;
+    background: #25282f;
+    border: 1px solid #2d3139;
+    border-radius: 6px;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.calendarButton:hover {
+    background: #2d3139;
+    color: #ffffff;
+}
+
+.calendar {
     background: #1f2228;
     border: 1px solid #2d3139;
     border-radius: 12px;
-    overflow-x: auto;
+    padding: 20px;
 }
 
-.leaveTable {
+.calendarWeekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.calendarWeekday {
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.calendarDays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendarDay {
+    padding: 12px;
+    text-align: center;
+    font-size: 14px;
+    color: #d1d5db;
+    background: #25282f;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendarDay:hover {
+    background: #2d3139;
+    color: #ffffff;
+}
+
+.calendarDayEmpty {
+    padding: 12px;
+    min-height: 44px;
+}
+
+.calendarDayLeave {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    font-weight: 600;
+}
+
+/* Requests Section */
+.requestsSection {
+    margin-bottom: 32px;
+}
+
+.requestsList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.requestCard {
+    background: #1f2228;
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.requestCard:hover {
+    border-color: #3b82f6;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.requestHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.requestDates {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.requestDate {
+    color: #ffffff;
+}
+
+.requestDateSeparator {
+    color: #6b7280;
+}
+
+.requestBody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.requestDuration {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.requestReason {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Admin Requests Table */
+.adminRequestsTable {
+    background: #1f2228;
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.adminRequestsTable table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1000px;
 }
 
-.leaveTable thead {
+.adminRequestsTable thead {
     background: #25282f;
     border-bottom: 1px solid #2d3139;
 }
 
-.leaveTable th {
+.adminRequestsTable th {
     padding: 16px 20px;
     text-align: left;
     font-size: 12px;
@@ -38,27 +367,24 @@
     white-space: nowrap;
 }
 
-.leaveTable tbody tr {
+.adminRequestsTable tbody tr {
     border-bottom: 1px solid #2d3139;
     transition: background-color 0.2s;
 }
 
-.leaveTable tbody tr:hover {
+.adminRequestsTable tbody tr:hover {
     background-color: #25282f;
 }
 
-.leaveTable tbody tr:last-child {
+.adminRequestsTable tbody tr:last-child {
     border-bottom: none;
 }
 
-.leaveTable tbody td {
+.adminRequestsTable td {
     padding: 16px 20px;
     color: #d1d5db;
     font-size: 14px;
-}
-
-.clickableRow {
-    cursor: pointer;
+    vertical-align: middle;
 }
 
 .employeeName {
@@ -66,15 +392,23 @@
     color: #ffffff;
 }
 
-.statusActions {
+.reasonCell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Action Buttons */
+.actionButtons {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.approveBtn,
-.rejectBtn {
-    padding: 6px;
+.approveButton,
+.rejectButton {
+    padding: 8px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -84,26 +418,70 @@
     justify-content: center;
 }
 
-.approveBtn {
+.approveButton {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
 }
 
-.approveBtn:hover {
+.approveButton:hover:not(:disabled) {
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     transform: scale(1.05);
 }
 
-.rejectBtn {
+.rejectButton {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
 }
 
-.rejectBtn:hover {
+.rejectButton:hover:not(:disabled) {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
     transform: scale(1.05);
 }
 
+.approveButton:disabled,
+.rejectButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.approveButtonLarge,
+.rejectButtonLarge {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.approveButtonLarge {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.approveButtonLarge:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+}
+
+.rejectButtonLarge {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.rejectButtonLarge:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Status Badges */
 .statusBadge {
     display: inline-block;
     padding: 6px 12px;
@@ -129,200 +507,39 @@
     color: #fef3c7;
 }
 
-.adminNote {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-    border: 1px solid #3b82f6;
-    border-radius: 12px;
-    padding: 20px 24px;
-    color: #dbeafe;
-}
-
-.noteHeader {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #ffffff;
-}
-
-.adminNote p {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-/* Employee View */
-.employeeView {
+/* Empty State */
+.emptyState {
+    padding: 80px 40px;
+    text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 32px;
-}
-
-.leaveBalanceSection {
-    display: grid;
-    grid-template-columns: 350px 1fr;
-    gap: 24px;
-}
-
-.balanceCard {
-    background: #1f2228;
-    border: 1px solid #2d3139;
-    border-radius: 12px;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.balanceCard h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
-}
-
-.balanceItems {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.balanceItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    background: #25282f;
-    border-radius: 8px;
-}
-
-.balanceLabel {
-    font-size: 14px;
-    color: #9ca3af;
-}
-
-.balanceValue {
-    font-size: 16px;
-    font-weight: 600;
-    color: #3b82f6;
-    font-family: "Courier New", monospace;
-}
-
-.requestButton {
-    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-}
-
-.requestButton:hover {
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-    transform: translateY(-2px);
-}
-
-/* Calendar */
-.calendarCard {
+    gap: 16px;
+    color: #6b7280;
     background: #1f2228;
     border: 1px solid #2d3139;
     border-radius: 12px;
-    padding: 24px;
 }
 
-.calendarHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
+.emptyState svg {
+    color: #4b5563;
+    opacity: 0.5;
 }
 
-.calendarHeader h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #ffffff;
+.emptyState p {
+    font-size: 16px;
     margin: 0;
 }
 
-.calendarNav {
-    padding: 8px;
-    background: transparent;
+.loadingState {
+    padding: 60px 40px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 16px;
+    background: #1f2228;
     border: 1px solid #2d3139;
-    border-radius: 6px;
-    color: #9ca3af;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-}
-
-.calendarNav:hover {
-    background: #25282f;
-    color: #ffffff;
-}
-
-.calendarGrid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-}
-
-.calendarWeekday {
-    padding: 12px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: #9ca3af;
-    text-transform: uppercase;
-}
-
-.calendarDay {
-    padding: 12px;
-    text-align: center;
-    font-size: 14px;
-    color: #d1d5db;
-    background: #25282f;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.calendarDay:hover {
-    background: #2d3139;
-    color: #ffffff;
-}
-
-.calendarDayEmpty {
-    padding: 12px;
-}
-
-.calendarDayLeave {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    font-weight: 600;
-}
-
-.requestsList {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.requestsList h3 {
-    font-size: 20px;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
+    border-radius: 12px;
 }
 
 /* Modal */
@@ -332,7 +549,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -377,7 +594,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px;
+    padding: 24px 32px;
     border-bottom: 1px solid #2d3139;
 }
 
@@ -388,7 +605,7 @@
     margin: 0;
 }
 
-.closeButton {
+.modalClose {
     padding: 8px;
     border: none;
     background: transparent;
@@ -400,13 +617,13 @@
     align-items: center;
 }
 
-.closeButton:hover {
+.modalClose:hover {
     background: #2d3139;
     color: #ffffff;
 }
 
 .modalBody {
-    padding: 24px;
+    padding: 32px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -425,7 +642,8 @@
     color: #d1d5db;
 }
 
-.formInput {
+.formGroup input,
+.formGroup textarea {
     padding: 12px 16px;
     border: 1px solid #2d3139;
     border-radius: 8px;
@@ -436,62 +654,36 @@
     font-family: inherit;
 }
 
-.formInput:focus {
+.formGroup input:focus,
+.formGroup textarea:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.formInput:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.formGroup textarea {
+    resize: vertical;
+    min-height: 100px;
 }
 
-.formRow {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
-}
-
-.dateInputs {
+.durationInfo {
     display: flex;
     align-items: center;
-    gap: 12px;
-}
-
-.dateInputs span {
-    color: #9ca3af;
-    font-size: 14px;
-}
-
-.fileUpload {
-    border: 2px dashed #2d3139;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 8px;
-    padding: 32px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.fileUpload:hover {
-    border-color: #3b82f6;
-    background: #25282f;
-}
-
-.fileInput {
-    display: none;
-}
-
-.fileLabel {
-    color: #9ca3af;
+    color: #60a5fa;
     font-size: 14px;
+    font-weight: 500;
 }
 
 .modalFooter {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    padding-top: 16px;
+    padding: 24px 32px;
     border-top: 1px solid #2d3139;
 }
 
@@ -508,8 +700,13 @@
     font-family: inherit;
 }
 
-.cancelButton:hover {
+.cancelButton:hover:not(:disabled) {
     background: #25282f;
+}
+
+.cancelButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .submitButton {
@@ -525,96 +722,166 @@
     font-family: inherit;
 }
 
-.submitButton:hover {
+.submitButton:hover:not(:disabled) {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     transform: translateY(-1px);
 }
 
-/* Details Grid */
-.detailsGrid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+.submitButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.detailItem {
+/* Detail Modal */
+.detailSection {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 16px;
 }
 
-.detailItem label {
-    font-size: 13px;
-    font-weight: 500;
+.detailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #25282f;
+    border-radius: 8px;
+}
+
+.detailLabel {
+    font-size: 14px;
+    font-weight: 600;
     color: #9ca3af;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-.detailItem p {
-    font-size: 15px;
+.detailValue {
+    font-size: 14px;
     color: #ffffff;
-    margin: 0;
+    text-align: right;
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-    .leaveBalanceSection {
-        grid-template-columns: 1fr;
+.adminActions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .balanceCards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .adminRequestsTable {
+        overflow-x: auto;
+    }
+
+    .adminRequestsTable table {
+        min-width: 900px;
     }
 }
 
 @media (max-width: 768px) {
-    .tableContainer {
-        overflow-x: auto;
-    }
-
-    .leaveTable {
-        min-width: 800px;
-    }
-
-    .leaveBalanceSection {
-        grid-template-columns: 1fr;
-    }
-
-    .detailsGrid {
-        grid-template-columns: 1fr;
-    }
-
-    .modal {
-        width: 95%;
-    }
-
-    .modalHeader,
-    .modalBody {
-        padding: 20px;
-    }
-
-    .dateInputs {
+    .header {
         flex-direction: column;
-        align-items: stretch;
-    }
-}
-
-@media (max-width: 480px) {
-    .balanceCard {
-        padding: 20px;
+        align-items: flex-start;
+        gap: 16px;
     }
 
-    .requestButton {
-        padding: 12px 16px;
+    .balanceCards {
+        grid-template-columns: 1fr;
+    }
+
+    .calendarControls {
+        gap: 8px;
+    }
+
+    .calendarMonth {
         font-size: 14px;
+        min-width: 140px;
+    }
+
+    .calendar {
+        padding: 16px;
     }
 
     .calendarDay,
     .calendarWeekday {
         padding: 8px;
         font-size: 12px;
+        min-height: 36px;
     }
 
-    .leaveTable th,
-    .leaveTable td {
-        padding: 12px;
-        font-size: 13px;
+    .requestCard {
+        padding: 16px;
+    }
+
+    .adminRequestsTable table {
+        min-width: 800px;
+    }
+
+    .modal {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .modalHeader,
+    .modalBody,
+    .modalFooter {
+        padding: 20px;
+    }
+
+    .adminActions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 20px;
+    }
+
+    .requestButton {
+        width: 100%;
+        padding: 14px;
+    }
+
+    .balanceValue {
+        font-size: 32px;
+    }
+
+    .calendarDay {
+        font-size: 11px;
+        padding: 6px;
+        min-height: 32px;
+    }
+
+    .calendarWeekday {
+        font-size: 10px;
+        padding: 6px;
+    }
+
+    .requestHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .modalHeader h3 {
+        font-size: 18px;
+    }
+
+    .modalBody {
+        padding: 16px;
+    }
+
+    .modalFooter {
+        flex-direction: column;
+        padding: 16px;
+    }
+
+    .cancelButton,
+    .submitButton {
+        width: 100%;
     }
 }

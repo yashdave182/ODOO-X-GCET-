@@ -204,6 +204,48 @@
     overflow: hidden;
 }
 
+/* Work Hours Summary */
+.workSummary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 24px;
+    background: #25282f;
+    border-bottom: 1px solid #2d3139;
+}
+
+.summaryCard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: #1f2228;
+    border: 1px solid #2d3139;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.summaryCard:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.summaryLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summaryValue {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+}
+
 /* Attendance Table */
 .attendanceTable {
     width: 100%;
@@ -554,6 +596,24 @@
     .attendanceTable {
         min-width: 600px;
     }
+
+    .workSummary {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .summaryCard {
+        padding: 12px;
+    }
+
+    .summaryLabel {
+        font-size: 11px;
+    }
+
+    .summaryValue {
+        font-size: 20px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -594,5 +654,23 @@
 
     .searchIcon {
         left: 14px;
+    }
+
+    .workSummary {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .summaryCard {
+        padding: 10px;
+    }
+
+    .summaryLabel {
+        font-size: 10px;
+    }
+
+    .summaryValue {
+        font-size: 18px;
     }
 }
